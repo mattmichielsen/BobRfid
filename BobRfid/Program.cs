@@ -12,7 +12,7 @@ namespace BobRfid
         private const int MIN_LAP_SECONDS = 30;
 
         static NLog.Logger logger = NLog.LogManager.GetCurrentClassLogger();
-        static ImpinjReader reader = new ImpinjReader();
+        static IReader reader;
         static ConcurrentDictionary<string, TagStats> tagStats = new ConcurrentDictionary<string, TagStats>();
         static HttpClient httpClient = new HttpClient();
 
@@ -20,8 +20,21 @@ namespace BobRfid
         ///  The main entry point for the application.
         /// </summary>
         [STAThread]
-        static void Main()
+        static void Main(string[] args)
         {
+            Application.EnableVisualStyles();
+            Application.SetCompatibleTextRenderingDefault(false);
+
+            if (args.Length > 0 && args[0].Equals("--test"))
+            {
+                reader = new FakeReader();
+                ((Form)reader).Show();
+            }
+            else
+            {
+                reader = new RealReader();
+            }
+
             try
             {
                 Connect();
@@ -31,8 +44,6 @@ namespace BobRfid
                 Console.WriteLine($"Failed to connect to reader: {ex}");
             }
 
-            Application.EnableVisualStyles();
-            Application.SetCompatibleTextRenderingDefault(false);
             Application.Run(new MainForm(reader, tagStats));
 
             reader.Stop();
@@ -51,7 +62,7 @@ namespace BobRfid
 
             // Use Advanced GPO to set GPO #1 
             // when an client (LLRP) connection is present.
-            settings.Gpos.GetGpo(1).Mode = GpoMode.LLRPConnectionStatus;
+            //settings.Gpos.GetGpo(1).Mode = GpoMode.LLRPConnectionStatus;
 
             // Tell the reader to include the timestamp in all tag reports.
             settings.Report.IncludeFirstSeenTime = true;
@@ -96,7 +107,7 @@ namespace BobRfid
             reader.TagsReported += OnTagsReported;
         }
 
-        private static void OnTagsReported(ImpinjReader reader, TagReport report)
+        private static void OnTagsReported(object reader, TagReport report)
         {
             Task.Factory.StartNew(async () =>
             {
@@ -145,11 +156,11 @@ namespace BobRfid
             });
         }
 
-        private static void OnConnectionLost(ImpinjReader reader)
+        private static void OnConnectionLost(object reader, EventArgs e)
         {
         }
 
-        private static void OnKeepaliveReceived(ImpinjReader reader)
+        private static void OnKeepaliveReceived(object reader, EventArgs e)
         {
         }
     }

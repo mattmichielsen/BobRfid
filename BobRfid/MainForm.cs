@@ -7,10 +7,10 @@ namespace BobRfid
 {
     public partial class MainForm : Form
     {
-        private static ImpinjReader reader;
+        private static IReader reader;
         private static ConcurrentDictionary<string, TagStats> tagStats;
 
-        public MainForm(ImpinjReader r, ConcurrentDictionary<string, TagStats> t)
+        public MainForm(IReader r, ConcurrentDictionary<string, TagStats> t)
         {
             InitializeComponent();
 
@@ -24,7 +24,7 @@ namespace BobRfid
             TagStatsListView.SetObjects(tagStats);
         }
 
-        private void OnTagsReported(ImpinjReader reader, TagReport report)
+        private void OnTagsReported(object reader, TagReport report)
         {
             UpdateCount(tagStats.Count); 
         }

@@ -1,0 +1,11 @@
+{
+  "profiles": {
+    "BobRfid": {
+      "commandName": "Project"
+    },
+    "FakeReader": {
+      "commandName": "Project",
+      "commandLineArgs": "--test"
+    }
+  }
+}
