@@ -31,7 +31,7 @@ namespace BobRfid
 
         private void UpdateCount(int count)
         {
-            if (CountLabel.InvokeRequired)
+            if (CountLabel.InvokeRequired && !Disposing)
             {
                 CountLabel.Invoke(new Action(() => CountLabel.Text = $"Count: {count}"));
             }

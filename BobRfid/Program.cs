@@ -2,7 +2,6 @@ using Impinj.OctaneSdk;
 using System;
 using System.Collections.Concurrent;
 using System.Net.Http;
-using System.Threading.Tasks;
 using System.Windows.Forms;
 
 namespace BobRfid
@@ -15,6 +14,7 @@ namespace BobRfid
         static IReader reader;
         static ConcurrentDictionary<string, TagStats> tagStats = new ConcurrentDictionary<string, TagStats>();
         static HttpClient httpClient = new HttpClient();
+        static DebounceThrottle.ThrottleDispatcher dispatcher = new DebounceThrottle.ThrottleDispatcher(500);
 
         /// <summary>
         ///  The main entry point for the application.
@@ -109,14 +109,15 @@ namespace BobRfid
 
         private static void OnTagsReported(object reader, TagReport report)
         {
-            Task.Factory.StartNew(async () =>
+            dispatcher.Throttle(async () =>
             {
                 var now = DateTime.Now;
                 foreach (Tag tag in report)
                 {
                     var key = tag.Epc.ToHexString();
                     try
-                    { 
+                    {
+                        logger.Trace($"Tracking ID '{key}'.");
                         if (!tagStats.ContainsKey(key))
                         {
                             tagStats[key] = new TagStats();
@@ -158,6 +159,7 @@ namespace BobRfid
 
         private static void OnConnectionLost(object reader, EventArgs e)
         {
+            logger.Error("Reader connection lost!");
         }
 
         private static void OnKeepaliveReceived(object reader, EventArgs e)

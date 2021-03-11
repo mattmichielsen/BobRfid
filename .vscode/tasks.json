@@ -1,0 +1,9 @@
+{
+  "version": "2.0.0",
+  "command": "msbuild",
+  "args": [ "/property:GenerateFullPaths=true" ],
+  "tasks": [{
+    "label": "build",
+    "problemMatcher": "$msCompile"
+  }] 
+}
