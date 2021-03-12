@@ -39,6 +39,11 @@ namespace BobRfid
             _reader.ApplySettings(settings);    
         }
 
+        public void Connect()
+        {
+            _reader.Connect();
+        }
+
         public void Connect(string address)
         {
             _reader.Connect(address);

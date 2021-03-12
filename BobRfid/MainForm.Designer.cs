@@ -36,6 +36,8 @@ namespace BobRfid
             this.CountColumn = ((BrightIdeasSoftware.OLVColumn)(new BrightIdeasSoftware.OLVColumn()));
             this.tableLayoutPanel1 = new System.Windows.Forms.TableLayoutPanel();
             this.CountLabel = new System.Windows.Forms.Label();
+            this.ReaderSettingsButton = new System.Windows.Forms.Button();
+            this.AntennaSettingsButton = new System.Windows.Forms.Button();
             ((System.ComponentModel.ISupportInitialize)(this.TagStatsListView)).BeginInit();
             this.tableLayoutPanel1.SuspendLayout();
             this.SuspendLayout();
@@ -48,7 +50,7 @@ namespace BobRfid
             this.TagStatsListView.Columns.AddRange(new System.Windows.Forms.ColumnHeader[] {
             this.EpcColumn,
             this.CountColumn});
-            this.tableLayoutPanel1.SetColumnSpan(this.TagStatsListView, 2);
+            this.tableLayoutPanel1.SetColumnSpan(this.TagStatsListView, 3);
             this.TagStatsListView.Cursor = System.Windows.Forms.Cursors.Default;
             this.TagStatsListView.Dock = System.Windows.Forms.DockStyle.Fill;
             this.TagStatsListView.HideSelection = false;
@@ -76,11 +78,14 @@ namespace BobRfid
             // 
             // tableLayoutPanel1
             // 
-            this.tableLayoutPanel1.ColumnCount = 2;
-            this.tableLayoutPanel1.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 50F));
-            this.tableLayoutPanel1.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 50F));
+            this.tableLayoutPanel1.ColumnCount = 3;
+            this.tableLayoutPanel1.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 33.33333F));
+            this.tableLayoutPanel1.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 33.33333F));
+            this.tableLayoutPanel1.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 33.33333F));
             this.tableLayoutPanel1.Controls.Add(this.TagStatsListView, 0, 0);
             this.tableLayoutPanel1.Controls.Add(this.CountLabel, 0, 1);
+            this.tableLayoutPanel1.Controls.Add(this.ReaderSettingsButton, 1, 1);
+            this.tableLayoutPanel1.Controls.Add(this.AntennaSettingsButton, 2, 1);
             this.tableLayoutPanel1.Dock = System.Windows.Forms.DockStyle.Fill;
             this.tableLayoutPanel1.Location = new System.Drawing.Point(0, 0);
             this.tableLayoutPanel1.Name = "tableLayoutPanel1";
@@ -93,11 +98,35 @@ namespace BobRfid
             // CountLabel
             // 
             this.CountLabel.AutoSize = true;
+            this.CountLabel.Dock = System.Windows.Forms.DockStyle.Fill;
             this.CountLabel.Location = new System.Drawing.Point(3, 351);
             this.CountLabel.Name = "CountLabel";
-            this.CountLabel.Size = new System.Drawing.Size(47, 13);
+            this.CountLabel.Size = new System.Drawing.Size(222, 39);
             this.CountLabel.TabIndex = 1;
             this.CountLabel.Text = "Count: 0";
+            this.CountLabel.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
+            // 
+            // ReaderSettingsButton
+            // 
+            this.ReaderSettingsButton.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.ReaderSettingsButton.Location = new System.Drawing.Point(231, 354);
+            this.ReaderSettingsButton.Name = "ReaderSettingsButton";
+            this.ReaderSettingsButton.Size = new System.Drawing.Size(222, 33);
+            this.ReaderSettingsButton.TabIndex = 2;
+            this.ReaderSettingsButton.Text = "Reader Settings";
+            this.ReaderSettingsButton.UseVisualStyleBackColor = true;
+            this.ReaderSettingsButton.Click += new System.EventHandler(this.ReaderSettingsButton_Click);
+            // 
+            // AntennaSettingsButton
+            // 
+            this.AntennaSettingsButton.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.AntennaSettingsButton.Location = new System.Drawing.Point(459, 354);
+            this.AntennaSettingsButton.Name = "AntennaSettingsButton";
+            this.AntennaSettingsButton.Size = new System.Drawing.Size(224, 33);
+            this.AntennaSettingsButton.TabIndex = 3;
+            this.AntennaSettingsButton.Text = "Antenna Settings";
+            this.AntennaSettingsButton.UseVisualStyleBackColor = true;
+            this.AntennaSettingsButton.Click += new System.EventHandler(this.AntennaSettingsButton_Click);
             // 
             // MainForm
             // 
@@ -123,6 +152,8 @@ namespace BobRfid
         private OLVColumn CountColumn;
         private System.Windows.Forms.TableLayoutPanel tableLayoutPanel1;
         private System.Windows.Forms.Label CountLabel;
+        private System.Windows.Forms.Button ReaderSettingsButton;
+        private System.Windows.Forms.Button AntennaSettingsButton;
     }
 }
 

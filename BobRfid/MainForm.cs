@@ -9,6 +9,7 @@ namespace BobRfid
     {
         private static IReader reader;
         private static ConcurrentDictionary<string, TagStats> tagStats;
+        private static NLog.Logger logger = NLog.LogManager.GetCurrentClassLogger();
 
         public MainForm(IReader r, ConcurrentDictionary<string, TagStats> t)
         {
@@ -33,7 +34,14 @@ namespace BobRfid
         {
             if (CountLabel.InvokeRequired && !Disposing)
             {
-                CountLabel.Invoke(new Action(() => CountLabel.Text = $"Count: {count}"));
+                try
+                {
+                    CountLabel.Invoke(new Action(() => CountLabel.Text = $"Count: {count}"));
+                }
+                catch (Exception ex)
+                {
+                    logger.Warn(ex, $"Error updating count: {ex}");
+                }
             }
             else
             {
@@ -44,6 +52,58 @@ namespace BobRfid
         private void MainForm_FormClosing(object sender, FormClosingEventArgs e)
         {
             reader.TagsReported -= OnTagsReported;
+        }
+
+        private void ReaderSettingsButton_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                var settings = reader.QueryDefaultSettings();
+                using (var settingsForm = new SettingsForm(settings))
+                {
+                    if (settingsForm.ShowDialog() == DialogResult.OK)
+                    {
+                        reader.ApplySettings(settings);
+                        reader.SaveSettings();
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                var errorMessage = $"Error applying settings: {ex}";
+                logger.Error(ex, errorMessage);
+                MessageBox.Show(errorMessage);
+            }
+            finally
+            {
+                reader.Connect();
+            }
+        }
+
+        private void AntennaSettingsButton_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                var settings = reader.QueryDefaultSettings();
+                using (var settingsForm = new SettingsForm(settings.Antennas.GetAntenna(1)))
+                {
+                    if (settingsForm.ShowDialog() == DialogResult.OK)
+                    {
+                        reader.ApplySettings(settings);
+                        reader.SaveSettings();
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                var errorMessage = $"Error applying settings: {ex}";
+                logger.Error(ex, errorMessage);
+                MessageBox.Show(errorMessage);
+            }
+            finally
+            {
+                reader.Connect();
+            }
         }
     }
 }

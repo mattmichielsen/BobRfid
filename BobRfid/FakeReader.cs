@@ -28,6 +28,11 @@ namespace BobRfid
             logger.Trace("Applying settings.");
         }
 
+        public void Connect()
+        {
+            logger.Trace("Connecting to previously connected address.");
+        }
+
         public void Connect(string address)
         {
             logger.Trace($"Connecting to '{address}'.");

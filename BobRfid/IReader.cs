@@ -15,5 +15,6 @@ namespace BobRfid
         void SaveSettings();
         void Stop();
         void Disconnect();
+        void Connect();
     }
 }
