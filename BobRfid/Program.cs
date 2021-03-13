@@ -21,6 +21,7 @@ namespace BobRfid
         static DebounceThrottle.ThrottleDispatcher dispatcher = new DebounceThrottle.ThrottleDispatcher(500);
         static bool registrationMode = false;
         static IZebraPrinter printer;
+        static BlockingCollection<TagSeen> tagsToProcess = new BlockingCollection<TagSeen>();
 
         static IZebraPrinter Printer
         {
@@ -63,6 +64,8 @@ namespace BobRfid
                 registrationMode = true;
                 logger.Trace("Started in registration mode.");
             }
+
+            Task.Run(() => ProcessTags());
 
             try
             {
@@ -136,12 +139,12 @@ namespace BobRfid
             reader.TagsReported += OnTagsReported;
         }
 
-        public static void Print(string id, string name, string className)
+        public static void Print(string id, string name, string team)
         {
             var zpl = $@"^XA^MCY^XZ^XA
 ^FO15,30^A0N,30,25^FH_^FD{id}^FS
 ^FO15,60^A0N,30,25^FH_^FD{name}^FS
-^FO15,90^A0N,30,25^FH_^FD{className}^FS
+^FO15,90^A0N,30,25^FH_^FD{team}^FS
 ^PQ1,0,0,N^XZ";
             Printer.Print(System.Text.Encoding.ASCII.GetBytes(zpl));
         }
@@ -187,7 +190,7 @@ namespace BobRfid
 
         private static void OnTagsReported(object reader, TagReport report)
         {
-            dispatcher.Throttle(async () =>
+            dispatcher.Throttle(() =>
             {
                 var now = DateTime.Now;
                 if (registrationMode && report.Tags.Count > 1)
@@ -198,76 +201,83 @@ namespace BobRfid
 
                 foreach (Tag tag in report)
                 {
-                    var key = tag.Epc.ToHexString();
-                    logger.Trace($"Tracking ID '{key}'.");
-                    if (registrationMode)
-                    {
-                        try
-                        {
-                            var pilot = await GetPilot(key);
-                            if (pilot != null)
-                            {
-                                logger.Trace($"Found existing pilot '{pilot.Name}'.");
-                            }
-                            else
-                            {
-                                //TODO: Get from list
-                                pilot = await AddPilot(new Pilot { Name = "Name", Team = "Team", TransponderToken = key });
-                            }
+                    var epc = tag.Epc.ToHexString();
+                    logger.Trace($"Tracking ID '{epc}'.");
+                    tagsToProcess.Add(new TagSeen { Epc = epc, Tag = tag, TimeStamp = now });
+                }
+            });
+        }
 
-                            if (!pilot.Printed)
-                            {
-                                Print(key, pilot.Name, pilot.Team);
-                                registeredPilots[key].Printed = true;
-                            }
-                        }
-                        catch (Exception ex)
-                        {
-                            logger.Error(ex, $"Error registering pilot: {ex}");
-                        }
-
-                        return;
-                    }
-
+        private static async void ProcessTags()
+        {
+            foreach (var seen in tagsToProcess.GetConsumingEnumerable())
+            { 
+                if (registrationMode)
+                {
                     try
                     {
-                        if (!tagStats.ContainsKey(key))
+                        var pilot = await GetPilot(seen.Epc);
+                        if (pilot != null)
                         {
-                            tagStats[key] = new TagStats();
-                            tagStats[key].TimeStamp = now;
-                            tagStats[key].LapStartTime = now;
-                            logger.Trace($"Started tracking first lap for ID '{key}'.");
+                            logger.Trace($"Found existing pilot '{pilot.Name}'.");
+                        }
+                        else
+                        {
+                            //TODO: Get from list
+                            pilot = await AddPilot(new Pilot { Name = "Name", Team = "Team", TransponderToken = seen.Epc });
                         }
 
-                        tagStats[key].LastReport = tag;
-                        tagStats[key].Count++;
-                        if (now > tagStats[key].TimeStamp.AddSeconds(MIN_LAP_SECONDS))
+                        if (!pilot.Printed)
                         {
-                            var lapTime = now - tagStats[key].LapStartTime;
-                            logger.Trace($"Logging lap time of {lapTime.TotalSeconds} seconds for ID '{key}'.");
-                            var result = await httpClient.PostAsync($"http://localhost:3000/api/v1/lap_track?transponder_token={key}&lap_time_in_ms={lapTime.TotalMilliseconds}", null);
-                            if (result.IsSuccessStatusCode)
-                            {
-                                tagStats[key].LapStartTime = now;
-                                logger.Trace($"Successfully logged lap time for ID '{key}'.");
-                            }
-                            else
-                            {
-                                throw new Exception($"Failed to log lap time of {lapTime.TotalSeconds} seconds for ID '{key}'. Full error: {await result.Content.ReadAsStringAsync()}");
-                            }
+                            Print(seen.Epc, pilot.Name, pilot.Team);
+                            registeredPilots[seen.Epc].Printed = true;
                         }
                     }
                     catch (Exception ex)
                     {
-                        logger.Error(ex, $"Error tracking tag '{key}': {ex}");
+                        logger.Error(ex, $"Error registering pilot: {ex}");
                     }
-                    finally
+
+                    return;
+                }
+
+                try
+                {
+                    if (!tagStats.ContainsKey(seen.Epc))
                     {
-                        tagStats[key].TimeStamp = now;
+                        tagStats[seen.Epc] = new TagStats();
+                        tagStats[seen.Epc].TimeStamp = seen.TimeStamp;
+                        tagStats[seen.Epc].LapStartTime = seen.TimeStamp;
+                        logger.Trace($"Started tracking first lap for ID '{seen.Epc}'.");
+                    }
+
+                    tagStats[seen.Epc].LastReport = seen.Tag;
+                    tagStats[seen.Epc].Count++;
+                    if (seen.TimeStamp > tagStats[seen.Epc].TimeStamp.AddSeconds(MIN_LAP_SECONDS))
+                    {
+                        var lapTime = seen.TimeStamp - tagStats[seen.Epc].LapStartTime;
+                        logger.Trace($"Logging lap time of {lapTime.TotalSeconds} seconds for ID '{seen.Epc}'.");
+                        var result = await httpClient.PostAsync($"http://localhost:3000/api/v1/lap_track?transponder_token={seen.Epc}&lap_time_in_ms={lapTime.TotalMilliseconds}", null);
+                        if (result.IsSuccessStatusCode)
+                        {
+                            tagStats[seen.Epc].LapStartTime = seen.TimeStamp;
+                            logger.Trace($"Successfully logged lap time for ID '{seen.Epc}'.");
+                        }
+                        else
+                        {
+                            throw new Exception($"Failed to log lap time of {lapTime.TotalSeconds} seconds for ID '{seen.Epc}'. Full error: {await result.Content.ReadAsStringAsync()}");
+                        }
                     }
                 }
-               
-            });
+                catch (Exception ex)
+                {
+                    logger.Error(ex, $"Error tracking tag '{seen.Epc}': {ex}");
+                }
+                finally
+                {
+                    tagStats[seen.Epc].TimeStamp = seen.TimeStamp;
+                }
+            }
         }
 
         private static void OnConnectionLost(object reader, EventArgs e)

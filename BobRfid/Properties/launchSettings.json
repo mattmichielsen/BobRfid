@@ -9,6 +9,10 @@
     },
     "Registration": {
       "commandName": "Project",
+      "commandLineArgs": "--register"
+    },
+    "FakeRegistration": {
+      "commandName": "Project",
       "commandLineArgs": "--register --test"
     }
   }
