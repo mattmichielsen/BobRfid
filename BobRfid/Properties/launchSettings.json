@@ -9,7 +9,7 @@
     },
     "Registration": {
       "commandName": "Project",
-      "commandLineArgs": "--register"
+      "commandLineArgs": "--register --test"
     }
   }
 }

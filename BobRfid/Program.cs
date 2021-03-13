@@ -48,7 +48,7 @@ namespace BobRfid
             httpClient.DefaultRequestHeaders.Accept.Clear();
             httpClient.DefaultRequestHeaders.Accept.Add(new System.Net.Http.Headers.MediaTypeWithQualityHeaderValue("application/json"));
 
-            if (args.Length > 0 && args[0].Equals("--test"))
+            if (args.Length > 0 && args.Contains("--test"))
             {
                 reader = new FakeReader();
                 ((Form)reader).Show();
@@ -61,6 +61,7 @@ namespace BobRfid
             if (args.Length > 0 && args.Contains("--register"))
             {
                 registrationMode = true;
+                logger.Trace("Started in registration mode.");
             }
 
             try
@@ -199,9 +200,9 @@ namespace BobRfid
                 {
                     var key = tag.Epc.ToHexString();
                     logger.Trace($"Tracking ID '{key}'.");
-                    try
+                    if (registrationMode)
                     {
-                        if (registrationMode)
+                        try
                         {
                             var pilot = await GetPilot(key);
                             if (pilot != null)
@@ -219,13 +220,13 @@ namespace BobRfid
                                 Print(key, pilot.Name, pilot.Team);
                                 registeredPilots[key].Printed = true;
                             }
-
-                            return;
                         }
-                    }
-                    catch (Exception ex)
-                    {
-                        logger.Error(ex, $"Error registering pilot: {ex}");
+                        catch (Exception ex)
+                        {
+                            logger.Error(ex, $"Error registering pilot: {ex}");
+                        }
+
+                        return;
                     }
 
                     try
