@@ -38,7 +38,7 @@ namespace BobRfid
             this.CountLabel = new System.Windows.Forms.Label();
             this.ReaderSettingsButton = new System.Windows.Forms.Button();
             this.AntennaSettingsButton = new System.Windows.Forms.Button();
-            this.PrintingButton = new System.Windows.Forms.Button();
+            this.RegistrationModeButton = new System.Windows.Forms.Button();
             ((System.ComponentModel.ISupportInitialize)(this.TagStatsListView)).BeginInit();
             this.tableLayoutPanel1.SuspendLayout();
             this.SuspendLayout();
@@ -88,7 +88,7 @@ namespace BobRfid
             this.tableLayoutPanel1.Controls.Add(this.CountLabel, 0, 1);
             this.tableLayoutPanel1.Controls.Add(this.ReaderSettingsButton, 1, 1);
             this.tableLayoutPanel1.Controls.Add(this.AntennaSettingsButton, 2, 1);
-            this.tableLayoutPanel1.Controls.Add(this.PrintingButton, 3, 1);
+            this.tableLayoutPanel1.Controls.Add(this.RegistrationModeButton, 3, 1);
             this.tableLayoutPanel1.Dock = System.Windows.Forms.DockStyle.Fill;
             this.tableLayoutPanel1.Location = new System.Drawing.Point(0, 0);
             this.tableLayoutPanel1.Name = "tableLayoutPanel1";
@@ -131,16 +131,16 @@ namespace BobRfid
             this.AntennaSettingsButton.UseVisualStyleBackColor = true;
             this.AntennaSettingsButton.Click += new System.EventHandler(this.AntennaSettingsButton_Click);
             // 
-            // PrintingButton
+            // RegistrationModeButton
             // 
-            this.PrintingButton.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.PrintingButton.Location = new System.Drawing.Point(516, 354);
-            this.PrintingButton.Name = "PrintingButton";
-            this.PrintingButton.Size = new System.Drawing.Size(167, 33);
-            this.PrintingButton.TabIndex = 4;
-            this.PrintingButton.Text = "Printing";
-            this.PrintingButton.UseVisualStyleBackColor = true;
-            this.PrintingButton.Click += new System.EventHandler(this.PrintingButton_Click);
+            this.RegistrationModeButton.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.RegistrationModeButton.Location = new System.Drawing.Point(516, 354);
+            this.RegistrationModeButton.Name = "RegistrationModeButton";
+            this.RegistrationModeButton.Size = new System.Drawing.Size(167, 33);
+            this.RegistrationModeButton.TabIndex = 4;
+            this.RegistrationModeButton.Text = "Registration Mode";
+            this.RegistrationModeButton.UseVisualStyleBackColor = true;
+            this.RegistrationModeButton.Click += new System.EventHandler(this.RegistrationModeButton_Click);
             // 
             // MainForm
             // 
@@ -168,7 +168,7 @@ namespace BobRfid
         private System.Windows.Forms.Label CountLabel;
         private System.Windows.Forms.Button ReaderSettingsButton;
         private System.Windows.Forms.Button AntennaSettingsButton;
-        private System.Windows.Forms.Button PrintingButton;
+        private System.Windows.Forms.Button RegistrationModeButton;
     }
 }
 

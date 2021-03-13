@@ -1,7 +1,10 @@
+using CsvHelper;
 using Impinj.OctaneSdk;
 using SharpZebra.Printing;
 using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
@@ -18,10 +21,12 @@ namespace BobRfid
         static ConcurrentDictionary<string, TagStats> tagStats = new ConcurrentDictionary<string, TagStats>();
         static ConcurrentDictionary<string, Pilot> registeredPilots = new ConcurrentDictionary<string, Pilot>();
         static HttpClient httpClient = new HttpClient();
-        static DebounceThrottle.ThrottleDispatcher dispatcher = new DebounceThrottle.ThrottleDispatcher(500);
-        static bool registrationMode = false;
+        static DebounceThrottle.ThrottleDispatcher dispatcher = new DebounceThrottle.ThrottleDispatcher(200);
         static IZebraPrinter printer;
         static BlockingCollection<TagSeen> tagsToProcess = new BlockingCollection<TagSeen>();
+        static Queue<Pilot> pendingRegistrations = new Queue<Pilot>();
+
+        public static bool RegistrationMode { get; set; } = false;
 
         static IZebraPrinter Printer
         {
@@ -61,7 +66,7 @@ namespace BobRfid
 
             if (args.Length > 0 && args.Contains("--register"))
             {
-                registrationMode = true;
+                RegistrationMode = true;
                 logger.Trace("Started in registration mode.");
             }
 
@@ -139,6 +144,25 @@ namespace BobRfid
             reader.TagsReported += OnTagsReported;
         }
 
+        public static int PendingRegistrations { get => pendingRegistrations.Count(); }
+
+        public static int LoadRegistrants(string fileName)
+        {
+            using (var reader = new StreamReader(fileName))
+            {
+                var config = new CsvHelper.Configuration.CsvConfiguration(System.Globalization.CultureInfo.InvariantCulture) { HeaderValidated = null, MissingFieldFound = null };
+                using (var csv = new CsvReader(reader, config))
+                {
+                    foreach (var record in csv.GetRecords<Pilot>())
+                    {
+                        pendingRegistrations.Enqueue(record);
+                    }
+
+                    return pendingRegistrations.Count();
+                }
+            }
+        }
+
         public static void Print(string id, string name, string team)
         {
             var zpl = $@"^XA^MCY^XZ^XA
@@ -193,7 +217,7 @@ namespace BobRfid
             dispatcher.Throttle(() =>
             {
                 var now = DateTime.Now;
-                if (registrationMode && report.Tags.Count > 1)
+                if (RegistrationMode && report.Tags.Count > 1)
                 {
                     logger.Warn($"Registration mode requires 1 tag at a time. {report.Tags.Count} were found.");
                     return;
@@ -211,8 +235,8 @@ namespace BobRfid
         private static async void ProcessTags()
         {
             foreach (var seen in tagsToProcess.GetConsumingEnumerable())
-            { 
-                if (registrationMode)
+            {
+                if (RegistrationMode)
                 {
                     try
                     {
@@ -223,8 +247,15 @@ namespace BobRfid
                         }
                         else
                         {
-                            //TODO: Get from list
-                            pilot = await AddPilot(new Pilot { Name = "Name", Team = "Team", TransponderToken = seen.Epc });
+                            var imported = pendingRegistrations.Dequeue();
+                            try
+                            {
+                                pilot = await AddPilot(new Pilot { Name = imported.Name, Team = imported.Team, TransponderToken = seen.Epc });
+                            }
+                            finally
+                            {
+                                pendingRegistrations.Enqueue(imported);
+                            }
                         }
 
                         if (!pilot.Printed)
@@ -237,45 +268,45 @@ namespace BobRfid
                     {
                         logger.Error(ex, $"Error registering pilot: {ex}");
                     }
-
-                    return;
                 }
-
-                try
+                else
                 {
-                    if (!tagStats.ContainsKey(seen.Epc))
+                    try
                     {
-                        tagStats[seen.Epc] = new TagStats();
-                        tagStats[seen.Epc].TimeStamp = seen.TimeStamp;
-                        tagStats[seen.Epc].LapStartTime = seen.TimeStamp;
-                        logger.Trace($"Started tracking first lap for ID '{seen.Epc}'.");
-                    }
-
-                    tagStats[seen.Epc].LastReport = seen.Tag;
-                    tagStats[seen.Epc].Count++;
-                    if (seen.TimeStamp > tagStats[seen.Epc].TimeStamp.AddSeconds(MIN_LAP_SECONDS))
-                    {
-                        var lapTime = seen.TimeStamp - tagStats[seen.Epc].LapStartTime;
-                        logger.Trace($"Logging lap time of {lapTime.TotalSeconds} seconds for ID '{seen.Epc}'.");
-                        var result = await httpClient.PostAsync($"http://localhost:3000/api/v1/lap_track?transponder_token={seen.Epc}&lap_time_in_ms={lapTime.TotalMilliseconds}", null);
-                        if (result.IsSuccessStatusCode)
+                        if (!tagStats.ContainsKey(seen.Epc))
                         {
+                            tagStats[seen.Epc] = new TagStats();
+                            tagStats[seen.Epc].TimeStamp = seen.TimeStamp;
                             tagStats[seen.Epc].LapStartTime = seen.TimeStamp;
-                            logger.Trace($"Successfully logged lap time for ID '{seen.Epc}'.");
+                            logger.Trace($"Started tracking first lap for ID '{seen.Epc}'.");
                         }
-                        else
+
+                        tagStats[seen.Epc].LastReport = seen.Tag;
+                        tagStats[seen.Epc].Count++;
+                        if (seen.TimeStamp > tagStats[seen.Epc].TimeStamp.AddSeconds(MIN_LAP_SECONDS))
                         {
-                            throw new Exception($"Failed to log lap time of {lapTime.TotalSeconds} seconds for ID '{seen.Epc}'. Full error: {await result.Content.ReadAsStringAsync()}");
+                            var lapTime = seen.TimeStamp - tagStats[seen.Epc].LapStartTime;
+                            logger.Trace($"Logging lap time of {lapTime.TotalSeconds} seconds for ID '{seen.Epc}'.");
+                            var result = await httpClient.PostAsync($"http://localhost:3000/api/v1/lap_track?transponder_token={seen.Epc}&lap_time_in_ms={lapTime.TotalMilliseconds}", null);
+                            if (result.IsSuccessStatusCode)
+                            {
+                                tagStats[seen.Epc].LapStartTime = seen.TimeStamp;
+                                logger.Trace($"Successfully logged lap time for ID '{seen.Epc}'.");
+                            }
+                            else
+                            {
+                                throw new Exception($"Failed to log lap time of {lapTime.TotalSeconds} seconds for ID '{seen.Epc}'. Full error: {await result.Content.ReadAsStringAsync()}");
+                            }
                         }
                     }
-                }
-                catch (Exception ex)
-                {
-                    logger.Error(ex, $"Error tracking tag '{seen.Epc}': {ex}");
-                }
-                finally
-                {
-                    tagStats[seen.Epc].TimeStamp = seen.TimeStamp;
+                    catch (Exception ex)
+                    {
+                        logger.Error(ex, $"Error tracking tag '{seen.Epc}': {ex}");
+                    }
+                    finally
+                    {
+                        tagStats[seen.Epc].TimeStamp = seen.TimeStamp;
+                    }
                 }
             }
         }

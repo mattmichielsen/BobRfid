@@ -1,5 +1,4 @@
 ﻿using Impinj.OctaneSdk;
-using SharpZebra.Printing;
 using System;
 using System.Collections.Concurrent;
 using System.Windows.Forms;
@@ -107,9 +106,32 @@ namespace BobRfid
             }
         }
 
-        private void PrintingButton_Click(object sender, EventArgs e)
+        private void RegistrationModeButton_Click(object sender, EventArgs e)
         {
-            Program.Print("123456789012345678", "PersonWith LongerThanNormalName", "Duck-billed platypus class");            
+            Program.RegistrationMode = !Program.RegistrationMode;
+            if (Program.RegistrationMode)
+            {
+                var pending = Program.PendingRegistrations;
+                if (pending > 0 && MessageBox.Show($"You already have {pending} registrations pending. Do you want to load more?") == DialogResult.No)
+                {
+                    return;
+                }
+
+                RegistrationModeButton.Text = "Back to timing mode";
+                using (var f = new OpenFileDialog())
+                {
+                    f.DefaultExt = "csv";
+                    if (f.ShowDialog() == DialogResult.OK)
+                    {
+                        var result = Program.LoadRegistrants(f.FileName);
+                        MessageBox.Show($"Loaded {result} participants.");
+                    }
+                }
+            }
+            else
+            {
+                RegistrationModeButton.Text = "Registration Mode";
+            }
         }
     }
 }
