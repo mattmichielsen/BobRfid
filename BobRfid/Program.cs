@@ -1,7 +1,10 @@
 using Impinj.OctaneSdk;
+using SharpZebra.Printing;
 using System;
 using System.Collections.Concurrent;
+using System.Linq;
 using System.Net.Http;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 
 namespace BobRfid
@@ -13,8 +16,25 @@ namespace BobRfid
         static NLog.Logger logger = NLog.LogManager.GetCurrentClassLogger();
         static IReader reader;
         static ConcurrentDictionary<string, TagStats> tagStats = new ConcurrentDictionary<string, TagStats>();
+        static ConcurrentDictionary<string, Pilot> registeredPilots = new ConcurrentDictionary<string, Pilot>();
         static HttpClient httpClient = new HttpClient();
         static DebounceThrottle.ThrottleDispatcher dispatcher = new DebounceThrottle.ThrottleDispatcher(500);
+        static bool registrationMode = false;
+        static IZebraPrinter printer;
+
+        static IZebraPrinter Printer
+        {
+            get
+            {
+                if (printer == null)
+                {
+                    var printerSettings = new PrinterSettings() { PrinterName = "ZDesigner TLP 2844-Z" };
+                    printer = new USBPrinter(printerSettings);
+                }
+
+                return printer;
+            }
+        }
 
         /// <summary>
         ///  The main entry point for the application.
@@ -25,6 +45,9 @@ namespace BobRfid
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
 
+            httpClient.DefaultRequestHeaders.Accept.Clear();
+            httpClient.DefaultRequestHeaders.Accept.Add(new System.Net.Http.Headers.MediaTypeWithQualityHeaderValue("application/json"));
+
             if (args.Length > 0 && args[0].Equals("--test"))
             {
                 reader = new FakeReader();
@@ -33,6 +56,11 @@ namespace BobRfid
             else
             {
                 reader = new RealReader();
+            }
+
+            if (args.Length > 0 && args.Contains("--register"))
+            {
+                registrationMode = true;
             }
 
             try
@@ -107,17 +135,101 @@ namespace BobRfid
             reader.TagsReported += OnTagsReported;
         }
 
+        public static void Print(string id, string name, string className)
+        {
+            var zpl = $@"^XA^MCY^XZ^XA
+^FO15,30^A0N,30,25^FH_^FD{id}^FS
+^FO15,60^A0N,30,25^FH_^FD{name}^FS
+^FO15,90^A0N,30,25^FH_^FD{className}^FS
+^PQ1,0,0,N^XZ";
+            Printer.Print(System.Text.Encoding.ASCII.GetBytes(zpl));
+        }
+
+        private static async Task<Pilot> GetPilot(string transponderToken)
+        {
+            Pilot result = null;
+            if (registeredPilots.ContainsKey(transponderToken))
+            {
+                result = registeredPilots[transponderToken];
+            }
+
+            var getResult = await httpClient.GetAsync($"http://localhost:3000/api/v1/pilot/{transponderToken}");
+            if (getResult.IsSuccessStatusCode)
+            {
+                result = Newtonsoft.Json.JsonConvert.DeserializeObject<Pilot>(await getResult.Content.ReadAsStringAsync());
+                registeredPilots[transponderToken] = result;
+            }
+            else
+            {
+                throw new Exception($"Can't find pilot with transponder token '{transponderToken}': {getResult.Content.ReadAsStringAsync()}");
+            }
+
+            return result;
+        }
+
+        private static async Task<Pilot> AddPilot(Pilot pilot)
+        {
+            var jsonPilot = Newtonsoft.Json.JsonConvert.SerializeObject(pilot);
+            logger.Trace($"Adding pilot: {jsonPilot}");
+            var postResult = await httpClient.PostAsync($"http://localhost:3000/api/v1/pilot", new StringContent(jsonPilot));
+            if (postResult.IsSuccessStatusCode)
+            {
+                var result = Newtonsoft.Json.JsonConvert.DeserializeObject<Pilot>(await postResult.Content.ReadAsStringAsync());
+                registeredPilots[pilot.TransponderToken] = result;
+                return result;
+            }
+            else
+            {
+                throw new Exception($"Failed to add pilot: {await postResult.Content.ReadAsStringAsync()}");
+            }
+        }
+
         private static void OnTagsReported(object reader, TagReport report)
         {
             dispatcher.Throttle(async () =>
             {
                 var now = DateTime.Now;
+                if (registrationMode && report.Tags.Count > 1)
+                {
+                    logger.Warn($"Registration mode requires 1 tag at a time. {report.Tags.Count} were found.");
+                    return;
+                }
+
                 foreach (Tag tag in report)
                 {
                     var key = tag.Epc.ToHexString();
+                    logger.Trace($"Tracking ID '{key}'.");
                     try
                     {
-                        logger.Trace($"Tracking ID '{key}'.");
+                        if (registrationMode)
+                        {
+                            var pilot = await GetPilot(key);
+                            if (pilot != null)
+                            {
+                                logger.Trace($"Found existing pilot '{pilot.Name}'.");
+                            }
+                            else
+                            {
+                                //TODO: Get from list
+                                pilot = await AddPilot(new Pilot { Name = "Name", Team = "Team", TransponderToken = key });
+                            }
+
+                            if (!pilot.Printed)
+                            {
+                                Print(key, pilot.Name, pilot.Team);
+                                registeredPilots[key].Printed = true;
+                            }
+
+                            return;
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        logger.Error(ex, $"Error registering pilot: {ex}");
+                    }
+
+                    try
+                    {
                         if (!tagStats.ContainsKey(key))
                         {
                             tagStats[key] = new TagStats();
@@ -146,7 +258,7 @@ namespace BobRfid
                     }
                     catch (Exception ex)
                     {
-                        logger.Error(ex, $"Error logging lap time: {ex}");
+                        logger.Error(ex, $"Error tracking tag '{key}': {ex}");
                     }
                     finally
                     {

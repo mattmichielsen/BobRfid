@@ -6,6 +6,10 @@
     "FakeReader": {
       "commandName": "Project",
       "commandLineArgs": "--test"
+    },
+    "Registration": {
+      "commandName": "Project",
+      "commandLineArgs": "--register"
     }
   }
 }

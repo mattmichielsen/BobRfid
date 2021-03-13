@@ -1,4 +1,5 @@
 ﻿using Impinj.OctaneSdk;
+using SharpZebra.Printing;
 using System;
 using System.Collections.Concurrent;
 using System.Windows.Forms;
@@ -104,6 +105,11 @@ namespace BobRfid
             {
                 reader.Connect();
             }
+        }
+
+        private void PrintingButton_Click(object sender, EventArgs e)
+        {
+            Program.Print("123456789012345678", "PersonWith LongerThanNormalName", "Duck-billed platypus class");            
         }
     }
 }
