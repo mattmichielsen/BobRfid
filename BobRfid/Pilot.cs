@@ -12,9 +12,5 @@ namespace BobRfid
 
         [JsonProperty("team")]
         public string Team { get; set; }
-
-        [JsonProperty("printed")]
-        [JsonIgnore]
-        public bool Printed { get; set; }
     }
 }

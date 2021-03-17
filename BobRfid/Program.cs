@@ -20,6 +20,7 @@ namespace BobRfid
         static IReader reader;
         static ConcurrentDictionary<string, TagStats> tagStats = new ConcurrentDictionary<string, TagStats>();
         static ConcurrentDictionary<string, Pilot> registeredPilots = new ConcurrentDictionary<string, Pilot>();
+        static ConcurrentDictionary<string, bool> printed = new ConcurrentDictionary<string, bool>();
         static HttpClient httpClient = new HttpClient();
         static DebounceThrottle.ThrottleDispatcher dispatcher = new DebounceThrottle.ThrottleDispatcher(200);
         static IZebraPrinter printer;
@@ -121,6 +122,14 @@ namespace BobRfid
             settings.Keepalives.EnableLinkMonitorMode = true;
             settings.Keepalives.LinkDownThreshold = 5;
 
+            settings.ReaderMode = ReaderMode.AutoSetDenseReader;
+            settings.SearchMode = SearchMode.SingleTarget;
+            settings.Session = 1;
+            settings.Antennas.TxPowerMax = false;
+            settings.Antennas.TxPowerInDbm = 20;
+            settings.Antennas.RxSensitivityMax = false;
+            settings.Antennas.RxSensitivityInDbm = -70;
+
             // Assign an event handler that will be called
             // when keepalive messages are received.
             reader.KeepaliveReceived += OnKeepaliveReceived;
@@ -166,7 +175,7 @@ namespace BobRfid
         public static void Print(string id, string name, string team)
         {
             var zpl = $@"^XA^MCY^XZ^XA
-^FO15,30^A0N,30,25^FH_^FD{id}^FS
+^FO15,30^A0N,30,23^FH_^FD{id}^FS
 ^FO15,60^A0N,30,25^FH_^FD{name}^FS
 ^FO15,90^A0N,30,25^FH_^FD{team}^FS
 ^PQ1,0,0,N^XZ";
@@ -258,10 +267,10 @@ namespace BobRfid
                             }
                         }
 
-                        if (!pilot.Printed)
+                        if (!printed.ContainsKey(seen.Epc) || !printed[seen.Epc])
                         {
                             Print(seen.Epc, pilot.Name, pilot.Team);
-                            registeredPilots[seen.Epc].Printed = true;
+                            printed[seen.Epc] = true;
                         }
                     }
                     catch (Exception ex)
