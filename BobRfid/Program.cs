@@ -14,7 +14,7 @@ namespace BobRfid
 {
     static class Program
     {
-        private const int MIN_LAP_SECONDS = 30;
+        private const int MIN_LAP_SECONDS = 10;
 
         static NLog.Logger logger = NLog.LogManager.GetCurrentClassLogger();
         static IReader reader;
@@ -71,11 +71,17 @@ namespace BobRfid
                 logger.Trace("Started in registration mode.");
             }
 
+            var lowPower = false;
+            if (args.Length > 0 && args.Contains("--lowpower"))
+            {
+                lowPower = true;
+            }
+
             Task.Run(() => ProcessTags());
 
             try
             {
-                Connect();
+                Connect(lowPower);
             }
             catch (Exception ex)
             {
@@ -88,7 +94,7 @@ namespace BobRfid
             reader.Disconnect();
         }
 
-        private static void Connect()
+        private static void Connect(bool lowPower)
         {
             reader.Connect("169.254.1.1");
             Settings settings = reader.QueryDefaultSettings();
@@ -122,13 +128,20 @@ namespace BobRfid
             settings.Keepalives.EnableLinkMonitorMode = true;
             settings.Keepalives.LinkDownThreshold = 5;
 
-            settings.ReaderMode = ReaderMode.AutoSetDenseReader;
-            settings.SearchMode = SearchMode.SingleTarget;
-            settings.Session = 1;
-            settings.Antennas.TxPowerMax = false;
-            settings.Antennas.TxPowerInDbm = 20;
-            settings.Antennas.RxSensitivityMax = false;
-            settings.Antennas.RxSensitivityInDbm = -70;
+            if (lowPower)
+            {
+                settings.ReaderMode = ReaderMode.AutoSetDenseReader;
+                settings.SearchMode = SearchMode.SingleTarget;
+                settings.Session = 1;
+                settings.Antennas.TxPowerMax = false;
+                settings.Antennas.TxPowerInDbm = 20;
+                settings.Antennas.RxSensitivityMax = false;
+                settings.Antennas.RxSensitivityInDbm = -70;
+            }
+            else
+            {
+                settings.ReaderMode = ReaderMode.AutoSetDenseReaderDeepScan;
+            }
 
             // Assign an event handler that will be called
             // when keepalive messages are received.
