@@ -1,5 +1,6 @@
 using CsvHelper;
 using Impinj.OctaneSdk;
+using Newtonsoft.Json;
 using SharpZebra.Printing;
 using System;
 using System.Collections.Concurrent;
@@ -52,6 +53,7 @@ namespace BobRfid
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
 
+            httpClient.BaseAddress = new Uri("http://localhost:3000/");
             httpClient.DefaultRequestHeaders.Accept.Clear();
             httpClient.DefaultRequestHeaders.Accept.Add(new System.Net.Http.Headers.MediaTypeWithQualityHeaderValue("application/json"));
 
@@ -90,8 +92,15 @@ namespace BobRfid
 
             Application.Run(new MainForm(reader, tagStats));
 
-            reader.Stop();
-            reader.Disconnect();
+            try
+            {
+                reader.Stop();
+                reader.Disconnect();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Failed to disconnect upon exit: {ex}");
+            }
         }
 
         private static void Connect(bool lowPower)
@@ -203,7 +212,7 @@ namespace BobRfid
                 result = registeredPilots[transponderToken];
             }
 
-            var getResult = await httpClient.GetAsync($"http://localhost:3000/api/v1/pilot/{transponderToken}");
+            var getResult = await httpClient.GetAsync($"api/v1/pilot/{transponderToken}");
             if (getResult.IsSuccessStatusCode)
             {
                 result = Newtonsoft.Json.JsonConvert.DeserializeObject<Pilot>(await getResult.Content.ReadAsStringAsync());
@@ -221,7 +230,7 @@ namespace BobRfid
         {
             var jsonPilot = Newtonsoft.Json.JsonConvert.SerializeObject(pilot);
             logger.Trace($"Adding pilot: {jsonPilot}");
-            var postResult = await httpClient.PostAsync($"http://localhost:3000/api/v1/pilot", new StringContent(jsonPilot));
+            var postResult = await httpClient.PostAsync($"api/v1/pilot", new StringContent(jsonPilot));
             if (postResult.IsSuccessStatusCode)
             {
                 var result = Newtonsoft.Json.JsonConvert.DeserializeObject<Pilot>(await postResult.Content.ReadAsStringAsync());
@@ -309,11 +318,12 @@ namespace BobRfid
                         {
                             var lapTime = seen.TimeStamp - tagStats[seen.Epc].LapStartTime;
                             logger.Trace($"Logging lap time of {lapTime.TotalSeconds} seconds for ID '{seen.Epc}'.");
-                            var result = await httpClient.PostAsync($"http://localhost:3000/api/v1/lap_track?transponder_token={seen.Epc}&lap_time_in_ms={lapTime.TotalMilliseconds}", null);
+                            var result = await httpClient.PostAsync($"api/v1/lap_track?transponder_token={seen.Epc}&lap_time_in_ms={lapTime.TotalMilliseconds}", null);
                             if (result.IsSuccessStatusCode)
                             {
                                 tagStats[seen.Epc].LapStartTime = seen.TimeStamp;
-                                logger.Trace($"Successfully logged lap time for ID '{seen.Epc}'.");
+                                var lap = JsonConvert.DeserializeObject<PilotRaceLap>(await result.Content.ReadAsStringAsync());
+                                logger.Trace($"Successfully logged lap '{lap.LapNum}' time '{TimeSpan.FromMilliseconds(lap.LapTime)}' for '{lap.Pilot.Name}' with ID '{seen.Epc}'.");
                             }
                             else
                             {
