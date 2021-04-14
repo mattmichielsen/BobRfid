@@ -27,6 +27,7 @@ namespace BobRfid
         static IZebraPrinter printer;
         static BlockingCollection<TagSeen> tagsToProcess = new BlockingCollection<TagSeen>();
         static Queue<Pilot> pendingRegistrations = new Queue<Pilot>();
+        static BlockingCollection<PendingLap> pendingLaps = new BlockingCollection<PendingLap>();
 
         public static bool RegistrationMode { get; set; } = false;
 
@@ -53,7 +54,7 @@ namespace BobRfid
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
 
-            httpClient.BaseAddress = new Uri("http://localhost:3000/");
+            httpClient.BaseAddress = new Uri("http://legsofsteel.bob85.com/test/");
             httpClient.DefaultRequestHeaders.Accept.Clear();
             httpClient.DefaultRequestHeaders.Accept.Add(new System.Net.Http.Headers.MediaTypeWithQualityHeaderValue("application/json"));
 
@@ -80,6 +81,7 @@ namespace BobRfid
             }
 
             Task.Run(() => ProcessTags());
+            Task.Run(() => SubmitLaps());
 
             try
             {
@@ -283,9 +285,10 @@ namespace BobRfid
                             {
                                 pilot = await AddPilot(new Pilot { Name = imported.Name, Team = imported.Team, TransponderToken = seen.Epc });
                             }
-                            finally
+                            catch
                             {
                                 pendingRegistrations.Enqueue(imported);
+                                throw;
                             }
                         }
 
@@ -316,19 +319,8 @@ namespace BobRfid
                         tagStats[seen.Epc].Count++;
                         if (seen.TimeStamp > tagStats[seen.Epc].TimeStamp.AddSeconds(MIN_LAP_SECONDS))
                         {
-                            var lapTime = seen.TimeStamp - tagStats[seen.Epc].LapStartTime;
-                            logger.Trace($"Logging lap time of {lapTime.TotalSeconds} seconds for ID '{seen.Epc}'.");
-                            var result = await httpClient.PostAsync($"api/v1/lap_track?transponder_token={seen.Epc}&lap_time_in_ms={lapTime.TotalMilliseconds}", null);
-                            if (result.IsSuccessStatusCode)
-                            {
-                                tagStats[seen.Epc].LapStartTime = seen.TimeStamp;
-                                var lap = JsonConvert.DeserializeObject<PilotRaceLap>(await result.Content.ReadAsStringAsync());
-                                logger.Trace($"Successfully logged lap '{lap.LapNum}' time '{TimeSpan.FromMilliseconds(lap.LapTime)}' for '{lap.Pilot.Name}' with ID '{seen.Epc}'.");
-                            }
-                            else
-                            {
-                                throw new Exception($"Failed to log lap time of {lapTime.TotalSeconds} seconds for ID '{seen.Epc}'. Full error: {await result.Content.ReadAsStringAsync()}");
-                            }
+                            pendingLaps.Add(new PendingLap { Epc = seen.Epc, LapTime = seen.TimeStamp - tagStats[seen.Epc].LapStartTime });
+                            tagStats[seen.Epc].LapStartTime = seen.TimeStamp;
                         }
                     }
                     catch (Exception ex)
@@ -339,6 +331,31 @@ namespace BobRfid
                     {
                         tagStats[seen.Epc].TimeStamp = seen.TimeStamp;
                     }
+                }
+            }
+        }
+
+        private static async Task SubmitLaps()
+        {
+            foreach (var pending in pendingLaps.GetConsumingEnumerable())
+            {
+                try
+                {
+                    logger.Trace($"Logging lap time of {pending.LapTime.TotalSeconds} seconds for ID '{pending.Epc}'.");
+                    var result = await httpClient.PostAsync($"api/v1/lap_track?transponder_token={pending.Epc}&lap_time_in_ms={pending.LapTime.TotalMilliseconds}", null);
+                    if (result.IsSuccessStatusCode)
+                    {
+                        var lap = JsonConvert.DeserializeObject<PilotRaceLap>(await result.Content.ReadAsStringAsync());
+                        logger.Trace($"Successfully logged lap '{lap.LapNum}' time '{TimeSpan.FromMilliseconds(lap.LapTime)}' for '{lap.Pilot.Name}' with ID '{pending.Epc}'.");
+                    }
+                    else
+                    {
+                        throw new Exception($"Failed to log lap time of {pending.LapTime.TotalSeconds} seconds for ID '{pending.Epc}'. Full error: {await result.Content.ReadAsStringAsync()}");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    logger.Error(ex);
                 }
             }
         }
