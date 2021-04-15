@@ -54,7 +54,7 @@ namespace BobRfid
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
 
-            httpClient.BaseAddress = new Uri("http://legsofsteel.bob85.com/test/");
+            httpClient.BaseAddress = new Uri("http://legsofsteel.bob85.com/lincoln/");
             httpClient.DefaultRequestHeaders.Accept.Clear();
             httpClient.DefaultRequestHeaders.Accept.Add(new System.Net.Http.Headers.MediaTypeWithQualityHeaderValue("application/json"));
 
@@ -342,6 +342,11 @@ namespace BobRfid
                 try
                 {
                     logger.Trace($"Logging lap time of {pending.LapTime.TotalSeconds} seconds for ID '{pending.Epc}'.");
+                    if (pending.IsRetry)
+                    {
+                        logger.Trace("Lap submission is a retry.");
+                    }
+
                     var result = await httpClient.PostAsync($"api/v1/lap_track?transponder_token={pending.Epc}&lap_time_in_ms={pending.LapTime.TotalMilliseconds}", null);
                     if (result.IsSuccessStatusCode)
                     {
@@ -350,13 +355,21 @@ namespace BobRfid
                     }
                     else
                     {
-                        throw new Exception($"Failed to log lap time of {pending.LapTime.TotalSeconds} seconds for ID '{pending.Epc}'. Full error: {await result.Content.ReadAsStringAsync()}");
+                        throw new TrackingFailedException($"Failed to log lap time of {pending.LapTime.TotalSeconds} seconds for ID '{pending.Epc}'. Full error: {await result.Content.ReadAsStringAsync()}");
                     }
                 }
-                catch (Exception ex)
+                catch (TrackingFailedException ex)
                 {
                     logger.Error(ex);
                 }
+                catch (Exception ex)
+                {
+                    pending.IsRetry = true;
+                    logger.Error(ex);
+                    pendingLaps.Add(pending);
+                }
+
+                await Task.Delay(100);
             }
         }
 
