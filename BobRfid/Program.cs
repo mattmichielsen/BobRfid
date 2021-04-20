@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
@@ -15,7 +16,7 @@ namespace BobRfid
 {
     static class Program
     {
-        private const int MIN_LAP_SECONDS = 10;
+        private const int MIN_LAP_SECONDS = 30;
 
         static NLog.Logger logger = NLog.LogManager.GetCurrentClassLogger();
         static IReader reader;
@@ -23,7 +24,7 @@ namespace BobRfid
         static ConcurrentDictionary<string, Pilot> registeredPilots = new ConcurrentDictionary<string, Pilot>();
         static ConcurrentDictionary<string, bool> printed = new ConcurrentDictionary<string, bool>();
         static HttpClient httpClient = new HttpClient();
-        static DebounceThrottle.ThrottleDispatcher dispatcher = new DebounceThrottle.ThrottleDispatcher(200);
+        static DebounceThrottle.ThrottleDispatcher dispatcher = new DebounceThrottle.ThrottleDispatcher(100);
         static IZebraPrinter printer;
         static BlockingCollection<TagSeen> tagsToProcess = new BlockingCollection<TagSeen>();
         static Queue<Pilot> pendingRegistrations = new Queue<Pilot>();
@@ -54,7 +55,7 @@ namespace BobRfid
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
 
-            httpClient.BaseAddress = new Uri("http://legsofsteel.bob85.com/lincoln/");
+            httpClient.BaseAddress = new Uri("http://legsofsteel.bob85.com/test/");
             httpClient.DefaultRequestHeaders.Accept.Clear();
             httpClient.DefaultRequestHeaders.Accept.Add(new System.Net.Http.Headers.MediaTypeWithQualityHeaderValue("application/json"));
 
@@ -81,6 +82,24 @@ namespace BobRfid
             }
 
             Task.Run(() => ProcessTags());
+
+            if (args.Length > 0 && args.Contains("--verifytrace"))
+            {
+                try
+                {
+                    VerifyTrace();
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Error: {ex}");
+                }
+
+                Console.WriteLine("Press any key to exit.");
+                Console.ReadKey();
+
+                return;
+            }
+
             Task.Run(() => SubmitLaps());
 
             try
@@ -102,6 +121,54 @@ namespace BobRfid
             catch (Exception ex)
             {
                 Console.WriteLine($"Failed to disconnect upon exit: {ex}");
+            }
+        }
+
+        private static void VerifyTrace()
+        {
+            Console.WriteLine("Input trace log file or directory:");
+            var path = Console.ReadLine();
+            var files = new List<string>();
+            if (File.Exists(path))
+            {
+                files.Add(path);
+            }
+            else if (Directory.Exists(path))
+            {
+                files.AddRange(Directory.GetFiles(path));
+            }
+            else
+            {
+                throw new InvalidOperationException($"File or Directory '{path}' does not exist.");
+            }
+
+            foreach (var file in files)
+            {
+                if (file.EndsWith(".log"))
+                {
+                    Console.WriteLine($"Reading file '{file}'.");
+                    var logRecords = new List<LogRecord>();
+                    using (var reader = new StreamReader(file))
+                    {
+                        var config = new CsvHelper.Configuration.CsvConfiguration(System.Globalization.CultureInfo.InvariantCulture) { HeaderValidated = null, MissingFieldFound = null, Delimiter = "|", HasHeaderRecord = false, BadDataFound = (b) => { Console.WriteLine($"Bad log line found: {b.RawRecord}"); } };
+                        using (var csv = new CsvReader(reader, config))
+                        {
+                            logRecords = csv.GetRecords<LogRecord>().ToList();
+                        }
+                    }
+
+                    foreach (var record in logRecords)
+                    {
+                        if (record.Logger.Equals("Trace"))
+                        {
+                            var match = Regex.Match(record.Message, @"^Tracking ID '(\w+)'.$", RegexOptions.RightToLeft);
+                            if (match.Success)
+                            {
+                                tagsToProcess.Add(new TagSeen { TimeStamp = DateTime.Parse(record.DateTime), Epc = match.Captures[0].Value });
+                            }
+                        }
+                    }
+                }
             }
         }
 
@@ -319,7 +386,9 @@ namespace BobRfid
                         tagStats[seen.Epc].Count++;
                         if (seen.TimeStamp > tagStats[seen.Epc].TimeStamp.AddSeconds(MIN_LAP_SECONDS))
                         {
-                            pendingLaps.Add(new PendingLap { Epc = seen.Epc, LapTime = seen.TimeStamp - tagStats[seen.Epc].LapStartTime });
+                            var lapTime = seen.TimeStamp - tagStats[seen.Epc].LapStartTime;
+                            logger.Trace($"Tracking lap for ID '{seen.Epc}' with time '{lapTime}'.");
+                            pendingLaps.Add(new PendingLap { Epc = seen.Epc, LapTime = lapTime });
                             tagStats[seen.Epc].LapStartTime = seen.TimeStamp;
                         }
                     }

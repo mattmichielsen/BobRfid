@@ -14,6 +14,10 @@
     "FakeRegistration": {
       "commandName": "Project",
       "commandLineArgs": "--register --test"
+    },
+    "VerifyTrace": {
+      "commandName": "Project",
+      "commandLineArgs": "--verifytrace"
     }
   }
 }
