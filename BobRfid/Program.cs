@@ -111,7 +111,15 @@ namespace BobRfid
                 Console.WriteLine($"Failed to connect to reader: {ex}");
             }
 
-            Application.Run(new MainForm(reader, tagStats));
+            if (args.Length > 0 && (args.Contains("--form") || args.Contains("--test")))
+            {
+                Application.Run(new MainForm(reader, tagStats));
+            }
+            else
+            {
+                Console.WriteLine("Press any key to stop.");
+                Console.ReadKey();
+            }
 
             try
             {
@@ -159,7 +167,7 @@ namespace BobRfid
 
                     foreach (var record in logRecords)
                     {
-                        if (record.Logger.Equals("Trace"))
+                        if (record.LogLevel.Equals("Trace"))
                         {
                             var match = Regex.Match(record.Message, @"^Tracking ID '(\w+)'.$", RegexOptions.RightToLeft);
                             if (match.Success)
