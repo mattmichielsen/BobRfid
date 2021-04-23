@@ -29,6 +29,7 @@ namespace BobRfid
         static BlockingCollection<TagSeen> tagsToProcess = new BlockingCollection<TagSeen>();
         static Queue<Pilot> pendingRegistrations = new Queue<Pilot>();
         static BlockingCollection<PendingLap> pendingLaps = new BlockingCollection<PendingLap>();
+        static AppSettings appSettings = new AppSettings();
 
         public static bool RegistrationMode { get; set; } = false;
 
@@ -55,7 +56,9 @@ namespace BobRfid
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
 
-            httpClient.BaseAddress = new Uri("http://legsofsteel.bob85.com/lincoln/");
+            appSettings.SettingsSaving += AppSettings_SettingsSaving;
+
+            httpClient.BaseAddress = new Uri(appSettings.ServiceBaseAddress);
             httpClient.DefaultRequestHeaders.Accept.Clear();
             httpClient.DefaultRequestHeaders.Accept.Add(new System.Net.Http.Headers.MediaTypeWithQualityHeaderValue("application/json"));
 
@@ -113,7 +116,7 @@ namespace BobRfid
 
             if (args.Length > 0 && (args.Contains("--form") || args.Contains("--test")))
             {
-                Application.Run(new MainForm(reader, tagStats));
+                Application.Run(new MainForm(reader, tagStats, appSettings));
             }
             else
             {
@@ -134,6 +137,11 @@ namespace BobRfid
             {
                 Console.WriteLine($"Failed to disconnect upon exit: {ex}");
             }
+        }
+
+        private static void AppSettings_SettingsSaving(object sender, System.ComponentModel.CancelEventArgs e)
+        {
+            httpClient.BaseAddress = new Uri(appSettings.ServiceBaseAddress);
         }
 
         private static void VerifyTrace()
@@ -186,7 +194,7 @@ namespace BobRfid
 
         private static void Connect(bool lowPower)
         {
-            reader.Connect("169.254.1.1");
+            reader.Connect(appSettings.ReaderIpAddress);
             Settings settings = reader.QueryDefaultSettings();
 
             // Start the reader as soon as it's configured.

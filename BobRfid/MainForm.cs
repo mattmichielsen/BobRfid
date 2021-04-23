@@ -10,13 +10,15 @@ namespace BobRfid
         private static IReader reader;
         private static ConcurrentDictionary<string, TagStats> tagStats;
         private static NLog.Logger logger = NLog.LogManager.GetCurrentClassLogger();
+        private static AppSettings appSettings;
 
-        public MainForm(IReader r, ConcurrentDictionary<string, TagStats> t)
+        internal MainForm(IReader r, ConcurrentDictionary<string, TagStats> t, AppSettings s)
         {
             InitializeComponent();
 
             reader = r;
             tagStats = t;
+            appSettings = s;
         }
 
         private void MainForm_Load(object sender, EventArgs e)
@@ -131,6 +133,30 @@ namespace BobRfid
             else
             {
                 RegistrationModeButton.Text = "Registration Mode";
+            }
+        }
+
+        private void AppSettingsButton_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                using (var settingsForm = new SettingsForm(appSettings))
+                {
+                    if (settingsForm.ShowDialog() == DialogResult.OK)
+                    {
+                        appSettings.Save();
+                    }
+                    else
+                    {
+                        appSettings.Reload();
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                var errorMessage = $"Error applying settings: {ex}";
+                logger.Error(ex, errorMessage);
+                MessageBox.Show(errorMessage);
             }
         }
     }

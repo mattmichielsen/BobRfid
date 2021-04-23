@@ -1,7 +1,12 @@
 {
   "profiles": {
-    "BobRfid": {
+    "Console": {
       "commandName": "Project"
+    },
+    "GUI": {
+      "commandName": "Project",
+      "commandLineArgs": "--form",
+      "comnmandLineArgs": "--form"
     },
     "FakeReader": {
       "commandName": "Project",

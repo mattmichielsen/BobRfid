@@ -1,0 +1,12 @@
+﻿<?xml version='1.0' encoding='utf-8'?>
+<SettingsFile xmlns="http://schemas.microsoft.com/VisualStudio/2004/01/settings" CurrentProfile="(Default)" GeneratedClassNamespace="BobRfid" GeneratedClassName="AppSettings">
+  <Profiles />
+  <Settings>
+    <Setting Name="ServiceBaseAddress" Type="System.String" Scope="User">
+      <Value Profile="(Default)">http://legsofsteel.bob85.com/test/</Value>
+    </Setting>
+    <Setting Name="ReaderIpAddress" Type="System.String" Scope="User">
+      <Value Profile="(Default)">169.254.1.1</Value>
+    </Setting>
+  </Settings>
+</SettingsFile>
