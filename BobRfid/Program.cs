@@ -399,7 +399,7 @@ namespace BobRfid
                             tagStats[seen.Epc] = new TagStats();
                             tagStats[seen.Epc].TimeStamp = seen.TimeStamp;
                             tagStats[seen.Epc].LapStartTime = seen.TimeStamp;
-                            logger.Trace($"Started tracking first lap for ID '{seen.Epc}'.");
+                            logger.Info($"Started tracking first lap for ID '{seen.Epc}'.");
                         }
 
                         tagStats[seen.Epc].LastReport = seen.Tag;
@@ -407,7 +407,7 @@ namespace BobRfid
                         if (seen.TimeStamp > tagStats[seen.Epc].TimeStamp.AddSeconds(MIN_LAP_SECONDS))
                         {
                             var lapTime = seen.TimeStamp - tagStats[seen.Epc].LapStartTime;
-                            logger.Trace($"Tracking lap for ID '{seen.Epc}' with time '{lapTime}'.");
+                            logger.Info($"Tracking lap for ID '{seen.Epc}' with time '{lapTime}'.");
                             pendingLaps.Add(new PendingLap { Epc = seen.Epc, LapTime = lapTime });
                             tagStats[seen.Epc].LapStartTime = seen.TimeStamp;
                         }
@@ -430,7 +430,7 @@ namespace BobRfid
             {
                 try
                 {
-                    logger.Trace($"Logging lap time of {pending.LapTime.TotalSeconds} seconds for ID '{pending.Epc}'.");
+                    logger.Info($"Logging lap time of {pending.LapTime.TotalSeconds} seconds for ID '{pending.Epc}'.");
                     if (pending.IsRetry)
                     {
                         logger.Trace("Lap submission is a retry.");
@@ -440,7 +440,7 @@ namespace BobRfid
                     if (result.IsSuccessStatusCode)
                     {
                         var lap = JsonConvert.DeserializeObject<PilotRaceLap>(await result.Content.ReadAsStringAsync());
-                        logger.Trace($"Successfully logged lap '{lap.LapNum}' time '{TimeSpan.FromMilliseconds(lap.LapTime)}' for '{lap.Pilot.Name}' with ID '{pending.Epc}'.");
+                        logger.Info($"Successfully logged lap '{lap.LapNum}' time '{TimeSpan.FromMilliseconds(lap.LapTime)}' for '{lap.Pilot.Name}' with ID '{pending.Epc}'.");
                     }
                     else
                     {
