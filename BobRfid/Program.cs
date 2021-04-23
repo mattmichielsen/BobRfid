@@ -55,7 +55,7 @@ namespace BobRfid
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
 
-            httpClient.BaseAddress = new Uri("http://legsofsteel.bob85.com/test/");
+            httpClient.BaseAddress = new Uri("http://legsofsteel.bob85.com/lincoln/");
             httpClient.DefaultRequestHeaders.Accept.Clear();
             httpClient.DefaultRequestHeaders.Accept.Add(new System.Net.Http.Headers.MediaTypeWithQualityHeaderValue("application/json"));
 
@@ -117,8 +117,12 @@ namespace BobRfid
             }
             else
             {
-                Console.WriteLine("Press any key to stop.");
-                Console.ReadKey();
+                string input = string.Empty;
+                while (!input.Equals("exit"))
+                {
+                    Console.WriteLine("Type 'exit' to stop.");
+                    input = Console.ReadLine();
+                }
             }
 
             try
