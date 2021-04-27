@@ -2,8 +2,8 @@
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>net50</TargetFramework>
-    <PlatformTarget>x64</PlatformTarget>
+    <TargetFramework>net5.0</TargetFramework>
+    <PlatformTarget>AnyCPU</PlatformTarget>
     <DebugType>portable</DebugType>
     <UseWindowsForms>false</UseWindowsForms>
   </PropertyGroup>
@@ -17,6 +17,8 @@
     <PackageReference Include="SharpZebra.rkone" Version="1.0.5" />
     <PackageReference Include="System.Configuration.ConfigurationManager" Version="5.0.0" />
     <PackageReference Include="System.Net.Http" Version="4.3.4" />
+    <PackageReference Include="System.Net.NameResolution" Version="4.3.0" />
+    <PackageReference Include="System.Threading.ThreadPool" Version="4.3.0" />
   </ItemGroup>
 
   <ItemGroup>
