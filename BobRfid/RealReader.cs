@@ -15,6 +15,8 @@ namespace BobRfid
             _reader.ConnectionLost += OnConnectionLost;
         }
 
+        public bool IsConnected => _reader.IsConnected;
+
         private void OnTagsReported(ImpinjReader reader, TagReport report)
         {
             TagsReported?.Invoke(this, report);

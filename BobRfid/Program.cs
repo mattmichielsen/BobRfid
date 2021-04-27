@@ -22,7 +22,7 @@ namespace BobRfid
         static ConcurrentDictionary<string, TagStats> tagStats = new ConcurrentDictionary<string, TagStats>();
         static ConcurrentDictionary<string, Pilot> registeredPilots = new ConcurrentDictionary<string, Pilot>();
         static ConcurrentDictionary<string, bool> printed = new ConcurrentDictionary<string, bool>();
-        static HttpClient httpClient = new HttpClient();
+        static HttpClient httpClient;
         static DebounceThrottle.ThrottleDispatcher dispatcher = new DebounceThrottle.ThrottleDispatcher(100);
         static IZebraPrinter printer;
         static BlockingCollection<TagSeen> tagsToProcess = new BlockingCollection<TagSeen>();
@@ -54,9 +54,7 @@ namespace BobRfid
         {
             appSettings.SettingsSaving += AppSettings_SettingsSaving;
 
-            httpClient.BaseAddress = new Uri(appSettings.ServiceBaseAddress);
-            httpClient.DefaultRequestHeaders.Accept.Clear();
-            httpClient.DefaultRequestHeaders.Accept.Add(new System.Net.Http.Headers.MediaTypeWithQualityHeaderValue("application/json"));
+            InitializeClient();
 
             if (args.Length > 0 && args.Contains("--test"))
             {
@@ -79,6 +77,7 @@ namespace BobRfid
                 lowPower = true;
             }
 
+            Task.Run(() => CheckConnections());
             Task.Run(() => ProcessTags());
 
             if (args.Length > 0 && args.Contains("--verifytrace"))
@@ -125,6 +124,16 @@ namespace BobRfid
                     {
                         break;
                     }
+                    else if (input.Equals("connect", StringComparison.InvariantCultureIgnoreCase))
+                    {
+                        Console.WriteLine("Connecting...");
+                        reader.Connect();
+                    }
+                    else if (input.Equals("disconnect", StringComparison.InvariantCultureIgnoreCase))
+                    {
+                        Console.WriteLine("Disconnecting...");
+                        reader.Disconnect();
+                    }
                     else if (input.Equals("instance", StringComparison.InvariantCultureIgnoreCase))
                     {
                         Console.WriteLine($"Currently connecting to '{appSettings.ServiceBaseAddress}'.");
@@ -133,6 +142,35 @@ namespace BobRfid
                         if (!string.IsNullOrWhiteSpace(newInstance))
                         {
                             appSettings.ServiceBaseAddress = $"http://legsofsteel.bob85.com/{newInstance}/";
+                            appSettings.Save();
+                        }
+                    }
+                    else if (input.Equals("timeout", StringComparison.InvariantCultureIgnoreCase))
+                    {
+                        Console.WriteLine($"Current service timeout is {appSettings.ServiceTimeoutSeconds} seconds.");
+                        Console.Write("New value in seconds (blank to leave unchanged:> ");
+                        var newTimeout = Console.ReadLine().Trim();
+                        if (!string.IsNullOrWhiteSpace(newTimeout))
+                        {
+                            if (int.TryParse(newTimeout, out int timeout) && timeout > 0)
+                            {
+                                appSettings.ServiceTimeoutSeconds = timeout;
+                                appSettings.Save();
+                            }
+                            else
+                            {
+                                logger.Warn($"Invalid timeout value '{newTimeout}'.");
+                            }
+                        }
+                    }
+                    else if (input.Equals("ip", StringComparison.InvariantCultureIgnoreCase))
+                    {
+                        Console.WriteLine($"Currently connecting to reader at host '{appSettings.ReaderIpAddress}'.");
+                        Console.Write("New hostname or IP address (blank to leave unchanged):> ");
+                        var newReaderHost = Console.ReadLine().Trim();
+                        if (!string.IsNullOrWhiteSpace(newReaderHost))
+                        {
+                            appSettings.ReaderIpAddress = newReaderHost;
                             appSettings.Save();
                         }
                     }
@@ -154,9 +192,67 @@ namespace BobRfid
             }
         }
 
+        private static void InitializeClient()
+        {
+            httpClient = new HttpClient();
+            httpClient.BaseAddress = new Uri(appSettings.ServiceBaseAddress);
+            httpClient.Timeout = TimeSpan.FromSeconds(appSettings.ServiceTimeoutSeconds);
+            httpClient.DefaultRequestHeaders.Accept.Clear();
+            httpClient.DefaultRequestHeaders.Accept.Add(new System.Net.Http.Headers.MediaTypeWithQualityHeaderValue("application/json"));
+        }
+
+        private static async Task<MonitorData> Monitor()
+        {
+            var result = await httpClient.GetAsync($"api/v1/monitor");
+            if (result.IsSuccessStatusCode)
+            {
+                return JsonConvert.DeserializeObject<MonitorData>(await result.Content.ReadAsStringAsync());
+            }
+            else if (result.StatusCode == System.Net.HttpStatusCode.Conflict)
+            {
+                return null;
+            }
+            else
+            {
+                throw new Exception($"Monitor API call failed with code '{result.StatusCode}' and content: {await result.Content.ReadAsStringAsync()}");
+            }
+        }
+
+        private static async Task CheckConnections()
+        {
+            while (true)
+            {
+                var monitorResult = false;
+                try
+                {
+                    var monitor = await Monitor();
+                    monitorResult = !string.IsNullOrWhiteSpace(monitor?.Session?.Title); 
+                }
+                catch (Exception ex)
+                {
+                    logger.Error(ex, $"Monitor error: {ex}");
+                }
+
+                if (reader != null && reader.IsConnected && monitorResult)
+                {
+                    Console.BackgroundColor = ConsoleColor.Green;
+                    Console.ForegroundColor = ConsoleColor.Black;
+                }
+                else
+                {
+                    Console.BackgroundColor = ConsoleColor.Red;
+                    Console.ForegroundColor = ConsoleColor.Black;
+                }
+
+                await Task.Delay(5000);
+            }
+        }
+
         private static void AppSettings_SettingsSaving(object sender, System.ComponentModel.CancelEventArgs e)
         {
-            httpClient.BaseAddress = new Uri(appSettings.ServiceBaseAddress);
+            InitializeClient();
+            reader.Disconnect();
+            reader.Connect(appSettings.ReaderIpAddress);
         }
 
         private static void VerifyTrace()

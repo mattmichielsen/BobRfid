@@ -22,6 +22,8 @@ namespace BobRfid
             _spamTimer.Start();
         }
 
+        public bool IsConnected { get; private set; }
+
         private void _spamTimer_Elapsed(object sender, System.Timers.ElapsedEventArgs e)
         {
             if (_spamming)
@@ -37,16 +39,19 @@ namespace BobRfid
 
         public void Connect()
         {
+            IsConnected = true;
             logger.Trace("Connecting to previously connected address.");
         }
 
         public void Connect(string address)
         {
+            IsConnected = true;
             logger.Trace($"Connecting to '{address}'.");
         }
 
         public void Disconnect()
         {
+            IsConnected = false;
             logger.Trace("Disconnecting.");
         }
 
