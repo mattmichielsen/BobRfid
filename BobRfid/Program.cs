@@ -10,7 +10,6 @@ using System.Linq;
 using System.Net.Http;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
-using System.Windows.Forms;
 
 namespace BobRfid
 {
@@ -53,9 +52,6 @@ namespace BobRfid
         [STAThread]
         static void Main(string[] args)
         {
-            Application.EnableVisualStyles();
-            Application.SetCompatibleTextRenderingDefault(false);
-
             appSettings.SettingsSaving += AppSettings_SettingsSaving;
 
             httpClient.BaseAddress = new Uri(appSettings.ServiceBaseAddress);
@@ -65,7 +61,6 @@ namespace BobRfid
             if (args.Length > 0 && args.Contains("--test"))
             {
                 reader = new FakeReader();
-                ((Form)reader).Show();
             }
             else
             {
@@ -114,17 +109,22 @@ namespace BobRfid
                 Console.WriteLine($"Failed to connect to reader: {ex}");
             }
 
-            if (args.Length > 0 && (args.Contains("--form") || args.Contains("--test")))
+            if (args.Length > 0 && args.Contains("--form"))
             {
-                Application.Run(new MainForm(reader, tagStats, appSettings));
+                Console.WriteLine("Form GUI is not currently supported.");   
             }
             else
             {
                 string input = string.Empty;
+                Console.WriteLine("Type 'exit' to stop.");
                 while (!input.Equals("exit"))
                 {
-                    Console.WriteLine("Type 'exit' to stop.");
-                    input = Console.ReadLine();
+                    Console.Write("BobRfid:> ");
+                    input = Console.ReadLine().Trim();
+                    if (reader is FakeReader)
+                    {
+                        ((FakeReader)reader).SendCommand(input);
+                    }
                 }
             }
 
