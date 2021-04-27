@@ -9,6 +9,8 @@ namespace BobRfid
         event EventHandler ConnectionLost;
         event EventHandler<TagReport> TagsReported;
 
+        bool IsConnected { get; }
+
         void Connect(string v);
         Settings QueryDefaultSettings();
         void ApplySettings(Settings settings);
