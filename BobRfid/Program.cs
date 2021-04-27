@@ -117,11 +117,26 @@ namespace BobRfid
             {
                 string input = string.Empty;
                 Console.WriteLine("Type 'exit' to stop.");
-                while (!input.Equals("exit"))
+                while (true)
                 {
                     Console.Write("BobRfid:> ");
                     input = Console.ReadLine().Trim();
-                    if (reader is FakeReader)
+                    if (input.Equals("exit", StringComparison.InvariantCultureIgnoreCase))
+                    {
+                        break;
+                    }
+                    else if (input.Equals("instance", StringComparison.InvariantCultureIgnoreCase))
+                    {
+                        Console.WriteLine($"Currently connecting to '{appSettings.ServiceBaseAddress}'.");
+                        Console.Write("New instance name (blank to leave unchanged):> ");
+                        var newInstance = Console.ReadLine().Trim();
+                        if (!string.IsNullOrWhiteSpace(newInstance))
+                        {
+                            appSettings.ServiceBaseAddress = $"http://legsofsteel.bob85.com/{newInstance}/";
+                            appSettings.Save();
+                        }
+                    }
+                    else if (reader is FakeReader)
                     {
                         ((FakeReader)reader).SendCommand(input);
                     }
