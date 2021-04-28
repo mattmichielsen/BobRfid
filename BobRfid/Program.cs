@@ -9,6 +9,7 @@ using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Text.RegularExpressions;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace BobRfid
@@ -52,6 +53,7 @@ namespace BobRfid
         [STAThread]
         static void Main(string[] args)
         {
+            Console.WriteLine("BobRfid starting up.");
             appSettings.SettingsSaving += AppSettings_SettingsSaving;
 
             InitializeClient();
@@ -77,7 +79,6 @@ namespace BobRfid
                 lowPower = true;
             }
 
-            Task.Run(() => CheckConnections());
             Task.Run(() => ProcessTags());
 
             if (args.Length > 0 && args.Contains("--verifytrace"))
@@ -99,6 +100,9 @@ namespace BobRfid
 
             Task.Run(() => SubmitLaps());
 
+            Console.WriteLine($"Waiting {appSettings.StartupDelaySeconds} seconds for reader to start up.");
+            Thread.Sleep(TimeSpan.FromSeconds(appSettings.StartupDelaySeconds));
+
             try
             {
                 Connect(lowPower);
@@ -107,6 +111,8 @@ namespace BobRfid
             {
                 Console.WriteLine($"Failed to connect to reader: {ex}");
             }
+
+            Task.Run(() => CheckConnections());
 
             if (args.Length > 0 && args.Contains("--form"))
             {
@@ -174,6 +180,24 @@ namespace BobRfid
                             appSettings.Save();
                         }
                     }
+                    else if (input.Equals("startupdelay", StringComparison.InvariantCultureIgnoreCase))
+                    {
+                        Console.WriteLine($"Current startup delay is {appSettings.StartupDelaySeconds} seconds.");
+                        Console.Write("New value in seconds (blank to leave unchanged:> ");
+                        var newStartupDelay = Console.ReadLine().Trim();
+                        if (!string.IsNullOrWhiteSpace(newStartupDelay))
+                        {
+                            if (int.TryParse(newStartupDelay, out int delay) && delay >= 0)
+                            {
+                                appSettings.StartupDelaySeconds = delay;
+                                appSettings.Save();
+                            }
+                            else
+                            {
+                                logger.Warn($"Invalid startup delay value '{newStartupDelay}'.");
+                            }
+                        }
+                    }
                     else if (reader is FakeReader)
                     {
                         ((FakeReader)reader).SendCommand(input);
@@ -183,12 +207,18 @@ namespace BobRfid
 
             try
             {
+                Console.WriteLine("Exiting...");
                 reader.Stop();
                 reader.Disconnect();
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"Failed to disconnect upon exit: {ex}");
+            }
+            finally
+            {
+                Console.BackgroundColor = ConsoleColor.Black;
+                Console.ForegroundColor = ConsoleColor.White;
             }
         }
 
@@ -305,6 +335,7 @@ namespace BobRfid
 
         private static void Connect(bool lowPower)
         {
+            Console.WriteLine($"Connecting to reader at '{appSettings.ReaderIpAddress}'.");
             reader.Connect(appSettings.ReaderIpAddress);
             Settings settings = reader.QueryDefaultSettings();
 
