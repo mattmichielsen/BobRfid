@@ -61,6 +61,7 @@ namespace BobRfid
             if (args.Length > 0 && args.Contains("--test"))
             {
                 reader = new FakeReader();
+                Console.WriteLine("TEST MODE");
             }
             else
             {
@@ -149,6 +150,25 @@ namespace BobRfid
                         {
                             appSettings.ServiceBaseAddress = $"http://legsofsteel.bob85.com/{newInstance}/";
                             appSettings.Save();
+                        }
+                    }
+                    else if (input.Equals("uri", StringComparison.InvariantCultureIgnoreCase))
+                    {
+                        Console.WriteLine($"Currently connecting to '{appSettings.ServiceBaseAddress}'.");
+                        Console.Write("New URI (blank to leave unchanged):> ");
+                        var newUri = Console.ReadLine().Trim();
+                        if (!string.IsNullOrWhiteSpace(newUri))
+                        {
+                            if (Uri.TryCreate(newUri, UriKind.Absolute, out Uri result))
+                            {
+                                Console.WriteLine("Valid URI. Saving.");
+                                appSettings.ServiceBaseAddress = newUri;
+                                appSettings.Save();
+                            }
+                            else
+                            {
+                                Console.WriteLine($"Invalid URI: {newUri}");
+                            }
                         }
                     }
                     else if (input.Equals("timeout", StringComparison.InvariantCultureIgnoreCase))

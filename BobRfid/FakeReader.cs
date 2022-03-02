@@ -91,6 +91,26 @@ namespace BobRfid
             {
                 return;
             }
+            else if (command.StartsWith("set", StringComparison.InvariantCultureIgnoreCase))
+            {
+                var split = command.Split(' ', StringSplitOptions.TrimEntries);
+                if (split.Length == 2)
+                {
+                    if (uint.TryParse(split[1], out uint result))
+                    {
+                        _tag.Epc = TagData.FromUnsignedInt(result);
+                        Console.WriteLine($"Test EPC set to: {_tag.Epc}");
+                    }
+                    else
+                    {
+                        logger.Warn($"Invalid uint value '{split[1]}'.");
+                    }
+                }
+                else
+                {
+                    logger.Warn($"Invalid set command '{command}'");
+                }
+            }
             else if (command.Equals("new", StringComparison.InvariantCultureIgnoreCase))
             {
                 GenerateNewTag();
