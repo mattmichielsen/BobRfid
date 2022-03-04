@@ -25,7 +25,7 @@ namespace BobRfid
         static ConcurrentDictionary<string, bool> printed = new ConcurrentDictionary<string, bool>();
         static HttpClient httpClient;
         static DebounceThrottle.ThrottleDispatcher dispatcher = new DebounceThrottle.ThrottleDispatcher(100);
-        static IZebraPrinter printer;
+        static IZebraPrinter zebraPrinter;
         static BlockingCollection<TagSeen> tagsToProcess = new BlockingCollection<TagSeen>();
         static Queue<Pilot> pendingRegistrations = new Queue<Pilot>();
         static BlockingCollection<PendingLap> pendingLaps = new BlockingCollection<PendingLap>();
@@ -33,17 +33,17 @@ namespace BobRfid
 
         public static bool RegistrationMode { get; set; } = false;
 
-        static IZebraPrinter Printer
+        static IZebraPrinter ZebraPrinter
         {
             get
             {
-                if (printer == null)
+                if (zebraPrinter == null)
                 {
                     var printerSettings = new PrinterSettings() { PrinterName = "ZDesigner TLP 2844-Z" };
-                    printer = new USBPrinter(printerSettings);
+                    zebraPrinter = new USBPrinter(printerSettings);
                 }
 
-                return printer;
+                return zebraPrinter;
             }
         }
 
@@ -70,6 +70,16 @@ namespace BobRfid
 
             if (args.Length > 0 && args.Contains("--register"))
             {
+                Console.WriteLine("REGISTRATION MODE");
+                try
+                {
+                    DymoSDK.App.Init();
+                }
+                catch (Exception ex)
+                {
+                    logger.Error(ex, $"Error initializing Dymo Connect: {ex}");
+                }
+
                 RegistrationMode = true;
                 logger.Trace("Started in registration mode.");
             }
@@ -216,6 +226,14 @@ namespace BobRfid
                             {
                                 logger.Warn($"Invalid startup delay value '{newStartupDelay}'.");
                             }
+                        }
+                    }
+                    else if (RegistrationMode && input.StartsWith("load", StringComparison.InvariantCultureIgnoreCase))
+                    {
+                        var split = input.Split(' ', StringSplitOptions.TrimEntries);
+                        if (split.Length == 2)
+                        {
+                            LoadRegistrants(split[1]);
                         }
                     }
                     else if (reader is FakeReader)
@@ -447,12 +465,42 @@ namespace BobRfid
 
         public static void Print(string id, string name, string team)
         {
-            var zpl = $@"^XA^MCY^XZ^XA
+            var printerType = (PrinterType)appSettings.PrinterType;
+            if (printerType == PrinterType.Zebra)
+            {
+                var zpl = $@"^XA^MCY^XZ^XA
 ^FO15,30^A0N,30,23^FH_^FD{id}^FS
 ^FO15,60^A0N,30,25^FH_^FD{name}^FS
 ^FO15,90^A0N,30,25^FH_^FD{team}^FS
 ^PQ1,0,0,N^XZ";
-            Printer.Print(System.Text.Encoding.ASCII.GetBytes(zpl));
+                ZebraPrinter.Print(System.Text.Encoding.ASCII.GetBytes(zpl));
+            }
+            else if (printerType == PrinterType.Dymo)
+            {
+                var label = DymoSDK.Implementations.DymoLabel.Instance;
+                label.LoadLabelFromFilePath(Path.Combine(Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location), "DymoTemplate.label"));
+                foreach (var labelObject in label.GetLabelObjects())
+                {
+                    if (labelObject.Name.Equals("id", StringComparison.InvariantCultureIgnoreCase))
+                    {
+                        label.UpdateLabelObject(labelObject, id);
+                    }
+                    else if (labelObject.Name.Equals("name", StringComparison.InvariantCultureIgnoreCase))
+                    {
+                        label.UpdateLabelObject(labelObject, name);
+                    }
+                    else if (labelObject.Name.Equals("team", StringComparison.InvariantCultureIgnoreCase))
+                    {
+                        label.UpdateLabelObject(labelObject, team);
+                    }
+                }
+
+                DymoSDK.Implementations.DymoPrinter.Instance.PrintLabel(label, "DYMO LabelWriter 450");
+            }
+            else
+            {
+                throw new NotSupportedException($"Unknown printer type '{printerType}'.");
+            }
         }
 
         private static async Task<Pilot> GetPilot(string transponderToken)

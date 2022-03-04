@@ -12,7 +12,7 @@ namespace BobRfid {
     
     
     [global::System.Runtime.CompilerServices.CompilerGeneratedAttribute()]
-    [global::System.CodeDom.Compiler.GeneratedCodeAttribute("Microsoft.VisualStudio.Editors.SettingsDesigner.SettingsSingleFileGenerator", "16.8.1.0")]
+    [global::System.CodeDom.Compiler.GeneratedCodeAttribute("Microsoft.VisualStudio.Editors.SettingsDesigner.SettingsSingleFileGenerator", "16.10.0.0")]
     internal sealed partial class AppSettings : global::System.Configuration.ApplicationSettingsBase {
         
         private static AppSettings defaultInstance = ((AppSettings)(global::System.Configuration.ApplicationSettingsBase.Synchronized(new AppSettings())));
@@ -68,6 +68,18 @@ namespace BobRfid {
             }
             set {
                 this["StartupDelaySeconds"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("2")]
+        public int PrinterType {
+            get {
+                return ((int)(this["PrinterType"]));
+            }
+            set {
+                this["PrinterType"] = value;
             }
         }
     }

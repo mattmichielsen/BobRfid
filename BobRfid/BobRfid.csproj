@@ -8,9 +8,14 @@
     <UseWindowsForms>false</UseWindowsForms>
   </PropertyGroup>
 
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+    <Prefer32Bit>true</Prefer32Bit>
+  </PropertyGroup>
+
   <ItemGroup>
     <PackageReference Include="CsvHelper" Version="26.0.1" />
     <PackageReference Include="DebounceThrottle" Version="1.0.0" />
+    <PackageReference Include="DYMO.Connect.SDK" Version="1.4.2.35" />
     <PackageReference Include="Newtonsoft.Json" Version="12.0.3" />
     <PackageReference Include="NLog" Version="4.7.8" />
     <PackageReference Include="OctaneSDK" Version="3.5.0" />
@@ -33,6 +38,9 @@
     <None Update="AppSettings.settings">
       <Generator>SettingsSingleFileGenerator</Generator>
       <LastGenOutput>AppSettings.Designer.cs</LastGenOutput>
+    </None>
+    <None Update="DymoTemplate.label">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Update="NLog.config">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
