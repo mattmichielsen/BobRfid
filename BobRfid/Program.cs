@@ -33,6 +33,8 @@ namespace BobRfid
 
         public static bool RegistrationMode { get; set; } = false;
 
+        public static bool RemoveBeforeRegistration { get; set; } = false;
+
         static IZebraPrinter ZebraPrinter
         {
             get
@@ -79,6 +81,11 @@ namespace BobRfid
             if (args.Length > 0 && args.Contains("--lowpower"))
             {
                 lowPower = true;
+            }
+
+            if (args.Length > 0 && args.Contains("--removebeforeregistration"))
+            {
+                RemoveBeforeRegistration = true;
             }
 
             Task.Run(() => ProcessTags());
@@ -132,6 +139,11 @@ namespace BobRfid
                 Console.WriteLine("Type 'exit' to stop.");
                 while (true)
                 {
+                    if (pendingRegistrations.Any())
+                    {
+                        Console.WriteLine($"Pending registrations: {pendingRegistrations.Count}");
+                    }
+
                     Console.Write("BobRfid:> ");
                     input = Console.ReadLine().Trim();
                     if (input.Equals("exit", StringComparison.InvariantCultureIgnoreCase))
@@ -448,8 +460,6 @@ namespace BobRfid
             reader.TagsReported += OnTagsReported;
         }
 
-        public static int PendingRegistrations { get => pendingRegistrations.Count(); }
-
         public static int LoadRegistrants(string fileName)
         {
             using (var reader = new StreamReader(fileName))
@@ -469,6 +479,20 @@ namespace BobRfid
 
         public static void Print(string id, string name, string team)
         {
+            if (string.IsNullOrWhiteSpace(id))
+            {
+                throw new ArgumentNullException(nameof(id));
+            }
+            else if (string.IsNullOrWhiteSpace(name))
+            {
+                throw new ArgumentNullException(nameof(name));
+            }
+
+            if (team == null)
+            {
+                team = string.Empty;
+            }
+
             var printerType = (PrinterType)appSettings.PrinterType;
             if (printerType == PrinterType.Zebra)
             {
@@ -507,12 +531,30 @@ namespace BobRfid
                 result = Newtonsoft.Json.JsonConvert.DeserializeObject<Pilot>(await getResult.Content.ReadAsStringAsync());
                 registeredPilots[transponderToken] = result;
             }
+            else if (getResult.StatusCode == System.Net.HttpStatusCode.NotFound)
+            {
+                return null;
+            }
             else
             {
                 throw new Exception($"Can't find pilot with transponder token '{transponderToken}': {getResult.Content.ReadAsStringAsync()}");
             }
 
             return result;
+        }
+
+        private static async Task<string> DeactivateToken(string transponderToken)
+        {
+            logger.Trace($"Deactivating token '{transponderToken}'.");
+            var postResult = await httpClient.PostAsync($"api/v1/pilot/deactivate_token/{transponderToken}", null);
+            if (postResult.IsSuccessStatusCode)
+            {
+                return await postResult.Content.ReadAsStringAsync();
+            }
+            else
+            {
+                throw new Exception($"Failed to deactivate pilot: {await postResult.Content.ReadAsStringAsync()}");
+            }
         }
 
         private static async Task<Pilot> AddPilot(Pilot pilot)
@@ -561,13 +603,25 @@ namespace BobRfid
                     try
                     {
                         var pilot = await GetPilot(seen.Epc);
-                        if (pilot != null)
+                        if (pilot != null && !RemoveBeforeRegistration)
                         {
                             logger.Trace($"Found existing pilot '{pilot.Name}'.");
                         }
                         else
                         {
+                            if (pilot != null)
+                            {
+                                logger.Trace($"Deactivating token '{seen.Epc}' from pilot '{pilot.Name}'.");
+                                await DeactivateToken(seen.Epc);
+                            }
+
                             var imported = pendingRegistrations.Dequeue();
+                            if (string.IsNullOrWhiteSpace(imported?.Name))
+                            {
+                                logger.Error("No name assigned for pending registration.");
+                                return;
+                            }
+
                             try
                             {
                                 pilot = await AddPilot(new Pilot { Name = imported.Name, Team = imported.Team, TransponderToken = seen.Epc });

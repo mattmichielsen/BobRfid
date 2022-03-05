@@ -23,6 +23,10 @@
     "VerifyTrace": {
       "commandName": "Project",
       "commandLineArgs": "--verifytrace"
+    },
+    "RemoveAndRegister": {
+      "commandName": "Project",
+      "commandLineArgs": "--register --lowpower --removebeforeregistration"
     }
   }
 }
