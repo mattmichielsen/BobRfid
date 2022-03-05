@@ -102,8 +102,14 @@ namespace BobRfid
 
             Task.Run(() => SubmitLaps());
 
-            Console.WriteLine($"Waiting {appSettings.StartupDelaySeconds} seconds for reader to start up.");
-            Thread.Sleep(TimeSpan.FromSeconds(appSettings.StartupDelaySeconds));
+            var startupDelaySeconds = appSettings.StartupDelaySeconds;
+            if (reader is FakeReader)
+            {
+                startupDelaySeconds = 0;
+            }
+
+            Console.WriteLine($"Waiting {startupDelaySeconds} seconds for reader to start up.");
+            Thread.Sleep(TimeSpan.FromSeconds(startupDelaySeconds));
 
             try
             {
@@ -224,7 +230,14 @@ namespace BobRfid
                         var split = input.Split(' ');
                         if (split.Length == 2)
                         {
-                            LoadRegistrants(split[1]);
+                            try
+                            {
+                                Console.WriteLine($"Loaded '{LoadRegistrants(split[1])}' participants.");
+                            }
+                            catch (Exception ex)
+                            {
+                                logger.Error(ex, $"Error loading registration file '{split[1]}': {ex}");
+                            }
                         }
                     }
                     else if (reader is FakeReader)
