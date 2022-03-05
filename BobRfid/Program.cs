@@ -546,7 +546,7 @@ namespace BobRfid
         private static async Task<string> DeactivateToken(string transponderToken)
         {
             logger.Trace($"Deactivating token '{transponderToken}'.");
-            var postResult = await httpClient.PostAsync($"api/v1/pilot/deactivate_token/{transponderToken}", null);
+            var postResult = await httpClient.PostAsync($"api/v1/pilot/{transponderToken}/deactivate", null);
             if (postResult.IsSuccessStatusCode)
             {
                 return await postResult.Content.ReadAsStringAsync();
@@ -566,6 +566,7 @@ namespace BobRfid
             {
                 var result = Newtonsoft.Json.JsonConvert.DeserializeObject<Pilot>(await postResult.Content.ReadAsStringAsync());
                 registeredPilots[pilot.TransponderToken] = result;
+                Console.WriteLine($"Added '{pilot.Name}' to team '{pilot.Team}' with ID '{pilot.TransponderToken}'.");
                 return result;
             }
             else
