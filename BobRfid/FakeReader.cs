@@ -93,7 +93,7 @@ namespace BobRfid
             }
             else if (command.StartsWith("set", StringComparison.InvariantCultureIgnoreCase))
             {
-                var split = command.Split(' ', StringSplitOptions.TrimEntries);
+                var split = command.Split(' ');
                 if (split.Length == 2)
                 {
                     if (uint.TryParse(split[1], out uint result))

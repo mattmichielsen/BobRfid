@@ -71,15 +71,6 @@ namespace BobRfid
             if (args.Length > 0 && args.Contains("--register"))
             {
                 Console.WriteLine("REGISTRATION MODE");
-                try
-                {
-                    DymoSDK.App.Init();
-                }
-                catch (Exception ex)
-                {
-                    logger.Error(ex, $"Error initializing Dymo Connect: {ex}");
-                }
-
                 RegistrationMode = true;
                 logger.Trace("Started in registration mode.");
             }
@@ -230,7 +221,7 @@ namespace BobRfid
                     }
                     else if (RegistrationMode && input.StartsWith("load", StringComparison.InvariantCultureIgnoreCase))
                     {
-                        var split = input.Split(' ', StringSplitOptions.TrimEntries);
+                        var split = input.Split(' ');
                         if (split.Length == 2)
                         {
                             LoadRegistrants(split[1]);
@@ -477,25 +468,11 @@ namespace BobRfid
             }
             else if (printerType == PrinterType.Dymo)
             {
-                var label = DymoSDK.Implementations.DymoLabel.Instance;
-                label.LoadLabelFromFilePath(Path.Combine(Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location), "DymoTemplate.label"));
-                foreach (var labelObject in label.GetLabelObjects())
-                {
-                    if (labelObject.Name.Equals("id", StringComparison.InvariantCultureIgnoreCase))
-                    {
-                        label.UpdateLabelObject(labelObject, id);
-                    }
-                    else if (labelObject.Name.Equals("name", StringComparison.InvariantCultureIgnoreCase))
-                    {
-                        label.UpdateLabelObject(labelObject, name);
-                    }
-                    else if (labelObject.Name.Equals("team", StringComparison.InvariantCultureIgnoreCase))
-                    {
-                        label.UpdateLabelObject(labelObject, team);
-                    }
-                }
-
-                DymoSDK.Implementations.DymoPrinter.Instance.PrintLabel(label, "DYMO LabelWriter 450");
+                var label = DYMO.Label.Framework.Label.Open(Path.Combine(Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location), "DymoTemplate.label"));
+                label.SetObjectText("id", id);
+                label.SetObjectText("name", name);
+                label.SetObjectText("team", team);
+                label.Print("DYMO LabelWriter 450");
             }
             else
             {

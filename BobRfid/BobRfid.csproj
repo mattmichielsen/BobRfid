@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>net5.0</TargetFramework>
+    <TargetFramework>net50-windows</TargetFramework>
     <PlatformTarget>AnyCPU</PlatformTarget>
     <DebugType>portable</DebugType>
     <UseWindowsForms>false</UseWindowsForms>
@@ -15,7 +15,7 @@
   <ItemGroup>
     <PackageReference Include="CsvHelper" Version="26.0.1" />
     <PackageReference Include="DebounceThrottle" Version="1.0.0" />
-    <PackageReference Include="DYMO.Connect.SDK" Version="1.4.2.35" />
+    <PackageReference Include="DYMO.Label" Version="8.5.1.4" />
     <PackageReference Include="Newtonsoft.Json" Version="12.0.3" />
     <PackageReference Include="NLog" Version="4.7.8" />
     <PackageReference Include="OctaneSDK" Version="3.5.0" />
