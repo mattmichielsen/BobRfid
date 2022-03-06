@@ -529,7 +529,6 @@ namespace BobRfid
             if (getResult.IsSuccessStatusCode)
             {
                 result = Newtonsoft.Json.JsonConvert.DeserializeObject<Pilot>(await getResult.Content.ReadAsStringAsync());
-                registeredPilots[transponderToken] = result;
             }
             else if (getResult.StatusCode == System.Net.HttpStatusCode.NotFound)
             {
@@ -608,7 +607,7 @@ namespace BobRfid
                         {
                             logger.Trace($"Found existing pilot '{pilot.Name}'.");
                         }
-                        else
+                        else if (!registeredPilots.ContainsKey(seen.Epc))
                         {
                             if (pilot != null)
                             {
@@ -632,6 +631,10 @@ namespace BobRfid
                                 pendingRegistrations.Enqueue(imported);
                                 throw;
                             }
+                        }
+                        else
+                        {
+                            logger.Trace($"Already registered pilot '{pilot.Name}' with ID '{pilot.TransponderToken}'.");
                         }
 
                         if (!printed.ContainsKey(seen.Epc) || !printed[seen.Epc])
