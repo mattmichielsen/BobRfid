@@ -309,8 +309,15 @@ namespace BobRfid
                 var monitorResult = false;
                 try
                 {
-                    var monitor = await Monitor();
-                    monitorResult = !string.IsNullOrWhiteSpace(monitor?.Session?.Title); 
+                    if (pendingLaps.Count() == 0)
+                    {
+                        var monitor = await Monitor();
+                        monitorResult = !string.IsNullOrWhiteSpace(monitor?.Session?.Title);
+                    }
+                    else
+                    {
+                        monitorResult = true;
+                    }
                 }
                 catch (Exception ex)
                 {
