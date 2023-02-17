@@ -463,11 +463,12 @@ namespace BobRfid
             }
         }
 
-        public static void Print(string id, string name, string team)
+        public static void Print(string id, string name, string team, string externalId)
         {
             var printerType = (PrinterType)appSettings.PrinterType;
             if (printerType == PrinterType.Zebra)
             {
+                //TODO: Add externalId for Zebra
                 var zpl = $@"^XA^MCY^XZ^XA
 ^FO15,30^A0N,30,23^FH_^FD{id}^FS
 ^FO15,60^A0N,30,25^FH_^FD{name}^FS
@@ -492,6 +493,10 @@ namespace BobRfid
                     else if (labelObject.Name.Equals("team", StringComparison.InvariantCultureIgnoreCase))
                     {
                         label.UpdateLabelObject(labelObject, team);
+                    }
+                    else if (labelObject.Name.Equals("external_id", StringComparison.InvariantCultureIgnoreCase))
+                    {
+                        label.UpdateLabelObject(labelObject, externalId);
                     }
                 }
 

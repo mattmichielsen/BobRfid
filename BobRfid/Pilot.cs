@@ -12,5 +12,8 @@ namespace BobRfid
 
         [JsonProperty("team")]
         public string Team { get; set; }
+
+        [JsonProperty("external_id")]
+        public string ExternalId { get; set; }
     }
 }
