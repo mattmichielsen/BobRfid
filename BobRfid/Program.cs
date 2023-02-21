@@ -596,7 +596,7 @@ namespace BobRfid
 
                         if (!printed.ContainsKey(seen.Epc) || !printed[seen.Epc])
                         {
-                            Print(seen.Epc, pilot.Name, pilot.Team);
+                            Print(seen.Epc, pilot.Name, pilot.Team, pilot.ExternalId);
                             printed[seen.Epc] = true;
                         }
                     }
