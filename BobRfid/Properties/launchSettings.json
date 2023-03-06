@@ -18,7 +18,7 @@
     },
     "FakeRegistration": {
       "commandName": "Project",
-      "commandLineArgs": "--register --test"
+      "commandLineArgs": "--register --test --nomonitor"
     },
     "VerifyTrace": {
       "commandName": "Project",

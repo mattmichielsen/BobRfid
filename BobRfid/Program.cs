@@ -32,6 +32,7 @@ namespace BobRfid
         static AppSettings appSettings = new AppSettings();
 
         public static bool RegistrationMode { get; set; } = false;
+        public static bool NoMonitor { get; set; } = false;
 
         static IZebraPrinter ZebraPrinter
         {
@@ -84,6 +85,11 @@ namespace BobRfid
                 logger.Trace("Started in registration mode.");
             }
 
+            if (args.Length > 0 && args.Contains("--nomonitor"))
+            {
+                NoMonitor = true;
+            }
+
             var lowPower = false;
             if (args.Length > 0 && args.Contains("--lowpower"))
             {
@@ -123,7 +129,10 @@ namespace BobRfid
                 Console.WriteLine($"Failed to connect to reader: {ex}");
             }
 
-            Task.Run(() => CheckConnections());
+            if (!NoMonitor)
+            {
+                Task.Run(() => CheckConnections());
+            }
 
             if (args.Length > 0 && args.Contains("--form"))
             {
@@ -522,6 +531,10 @@ namespace BobRfid
                 result = Newtonsoft.Json.JsonConvert.DeserializeObject<Pilot>(await getResult.Content.ReadAsStringAsync());
                 registeredPilots[transponderToken] = result;
             }
+            else if (getResult.StatusCode == System.Net.HttpStatusCode.NotFound)
+            {
+                return null;
+            }
             else
             {
                 throw new Exception($"Can't find pilot with transponder token '{transponderToken}': {getResult.Content.ReadAsStringAsync()}");
@@ -585,7 +598,7 @@ namespace BobRfid
                             var imported = pendingRegistrations.Dequeue();
                             try
                             {
-                                pilot = await AddPilot(new Pilot { Name = imported.Name, Team = imported.Team, TransponderToken = seen.Epc });
+                                pilot = await AddPilot(new Pilot { Name = imported.Name, Team = imported.Team, ExternalId = imported.ExternalId, TransponderToken = seen.Epc });
                             }
                             catch
                             {
