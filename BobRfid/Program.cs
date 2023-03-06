@@ -32,6 +32,7 @@ namespace BobRfid
         static AppSettings appSettings = new AppSettings();
 
         public static bool RegistrationMode { get; set; } = false;
+        public static bool NoMonitor { get; set; } = false;
 
         public static bool RemoveBeforeRegistration { get; set; } = false;
 
@@ -75,6 +76,11 @@ namespace BobRfid
                 Console.WriteLine("REGISTRATION MODE");
                 RegistrationMode = true;
                 logger.Trace("Started in registration mode.");
+            }
+
+            if (args.Length > 0 && args.Contains("--nomonitor"))
+            {
+                NoMonitor = true;
             }
 
             var lowPower = false;
@@ -127,7 +133,10 @@ namespace BobRfid
                 Console.WriteLine($"Failed to connect to reader: {ex}");
             }
 
-            Task.Run(() => CheckConnections());
+            if (!NoMonitor)
+            {
+                Task.Run(() => CheckConnections());
+            }
 
             if (args.Length > 0 && args.Contains("--form"))
             {
@@ -484,7 +493,7 @@ namespace BobRfid
             }
         }
 
-        public static void Print(string id, string name, string team)
+        public static void Print(string id, string name, string team, string externalId)
         {
             if (string.IsNullOrWhiteSpace(id))
             {
@@ -503,6 +512,7 @@ namespace BobRfid
             var printerType = (PrinterType)appSettings.PrinterType;
             if (printerType == PrinterType.Zebra)
             {
+                //TODO: Add externalId for Zebra
                 var zpl = $@"^XA^MCY^XZ^XA
 ^FO15,30^A0N,30,23^FH_^FD{id}^FS
 ^FO15,60^A0N,30,25^FH_^FD{name}^FS
@@ -516,6 +526,7 @@ namespace BobRfid
                 label.SetObjectText("id", id);
                 label.SetObjectText("name", name);
                 label.SetObjectText("team", team);
+                label.SetObjectText("external_id", externalId);
                 label.Print("DYMO LabelWriter 450");
             }
             else
@@ -536,6 +547,10 @@ namespace BobRfid
             if (getResult.IsSuccessStatusCode)
             {
                 result = Newtonsoft.Json.JsonConvert.DeserializeObject<Pilot>(await getResult.Content.ReadAsStringAsync());
+            }
+            else if (getResult.StatusCode == System.Net.HttpStatusCode.NotFound)
+            {
+                return null;
             }
             else if (getResult.StatusCode == System.Net.HttpStatusCode.NotFound)
             {
@@ -631,7 +646,7 @@ namespace BobRfid
 
                             try
                             {
-                                pilot = await AddPilot(new Pilot { Name = imported.Name, Team = imported.Team, TransponderToken = seen.Epc });
+                                pilot = await AddPilot(new Pilot { Name = imported.Name, Team = imported.Team, ExternalId = imported.ExternalId, TransponderToken = seen.Epc });
                             }
                             catch
                             {
@@ -646,7 +661,7 @@ namespace BobRfid
 
                         if (!printed.ContainsKey(seen.Epc) || !printed[seen.Epc])
                         {
-                            Print(seen.Epc, pilot.Name, pilot.Team);
+                            Print(seen.Epc, pilot.Name, pilot.Team, pilot.ExternalId);
                             printed[seen.Epc] = true;
                         }
                     }

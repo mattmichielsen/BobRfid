@@ -56,7 +56,7 @@
 				</Element>
 			</StyledText>
 		</TextObject>
-		<Bounds X="317" Y="975" Width="3330" Height="945" />
+		<Bounds X="317" Y="720" Width="3330" Height="945" />
 	</ObjectInfo>
 	<ObjectInfo>
 		<TextObject>
@@ -76,12 +76,38 @@
 				<Element>
 					<String>Team</String>
 					<Attributes>
-						<Font Family="Comic Sans MS" Size="14" Bold="False" Italic="False" Underline="False" Strikeout="False" />
+						<Font Family="Comic Sans MS" Size="16" Bold="False" Italic="False" Underline="False" Strikeout="False" />
 						<ForeColor Alpha="255" Red="0" Green="0" Blue="0" />
 					</Attributes>
 				</Element>
 			</StyledText>
 		</TextObject>
 		<Bounds X="317" Y="2400" Width="3315" Height="300" />
+	</ObjectInfo>
+	<ObjectInfo>
+		<TextObject>
+			<Name>external_id</Name>
+			<ForeColor Alpha="255" Red="0" Green="0" Blue="0" />
+			<BackColor Alpha="0" Red="255" Green="255" Blue="255" />
+			<LinkedObjectName></LinkedObjectName>
+			<Rotation>Rotation0</Rotation>
+			<IsMirrored>False</IsMirrored>
+			<IsVariable>False</IsVariable>
+			<HorizontalAlignment>Center</HorizontalAlignment>
+			<VerticalAlignment>Top</VerticalAlignment>
+			<TextFitMode>ShrinkToFit</TextFitMode>
+			<UseFullFontHeight>True</UseFullFontHeight>
+			<Verticalized>False</Verticalized>
+			<StyledText>
+				<Element>
+					<String>External ID</String>
+					<Attributes>
+						<Font Family="Comic Sans MS" Size="12" Bold="False" Italic="False" Underline="False" Strikeout="False" />
+						<ForeColor Alpha="255" Red="0" Green="0" Blue="0" />
+					</Attributes>
+				</Element>
+			</StyledText>
+		</TextObject>
+		<Bounds X="332" Y="1650" Width="3317" Height="375" />
 	</ObjectInfo>
 </DieCutLabel>
