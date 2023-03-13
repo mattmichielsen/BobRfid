@@ -95,6 +95,7 @@ namespace BobRfid
             }
 
             Task.Run(() => ProcessTags());
+            Task.Run(() => SubmitLaps());
 
             if (args.Length > 0 && args.Contains("--verifytrace"))
             {
@@ -112,8 +113,6 @@ namespace BobRfid
 
                 return;
             }
-
-            Task.Run(() => SubmitLaps());
 
             var startupDelaySeconds = appSettings.StartupDelaySeconds;
             if (reader is FakeReader)
@@ -357,6 +356,7 @@ namespace BobRfid
 
         private static void VerifyTrace()
         {
+            Console.WriteLine($"Currently connected to '{appSettings.ServiceBaseAddress}'.");
             Console.WriteLine("Input trace log file or directory:");
             var path = Console.ReadLine();
             var files = new List<string>();
@@ -395,7 +395,7 @@ namespace BobRfid
                             var match = Regex.Match(record.Message, @"^Tracking ID '(\w+)'.$", RegexOptions.RightToLeft);
                             if (match.Success)
                             {
-                                tagsToProcess.Add(new TagSeen { TimeStamp = DateTime.Parse(record.DateTime), Epc = match.Captures[0].Value });
+                                tagsToProcess.Add(new TagSeen { TimeStamp = DateTime.Parse(record.DateTime), Epc = match.Captures[0].Value, IsRetry = true });
                             }
                         }
                     }
@@ -688,7 +688,7 @@ namespace BobRfid
                         {
                             var lapTime = seen.TimeStamp - tagStats[seen.Epc].LapStartTime;
                             logger.Info($"Tracking lap for ID '{seen.Epc}' with time '{lapTime}'.");
-                            pendingLaps.Add(new PendingLap { Epc = seen.Epc, LapTime = lapTime });
+                            pendingLaps.Add(new PendingLap { Epc = seen.Epc, LapTime = lapTime, IsRetry = seen.IsRetry });
                             tagStats[seen.Epc].LapStartTime = seen.TimeStamp;
                         }
                     }
@@ -716,7 +716,7 @@ namespace BobRfid
                         logger.Trace("Lap submission is a retry.");
                     }
 
-                    var result = await httpClient.PostAsync($"api/v1/lap_track?transponder_token={pending.Epc}&lap_time_in_ms={pending.LapTime.TotalMilliseconds}", null);
+                    var result = await httpClient.PostAsync($"api/v1/lap_track?transponder_token={pending.Epc}&lap_time_in_ms={pending.LapTime.TotalMilliseconds}&is_retry={pending.IsRetry}", null);
                     if (result.IsSuccessStatusCode)
                     {
                         var lap = JsonConvert.DeserializeObject<PilotRaceLap>(await result.Content.ReadAsStringAsync());
