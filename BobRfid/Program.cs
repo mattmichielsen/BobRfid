@@ -113,6 +113,23 @@ namespace BobRfid
 
                 return;
             }
+            else if (args.Length > 0 && args.Contains("--verifylaps"))
+            {
+                try
+                {
+                    VerifyTrace(true);
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Error: {ex}");
+                }
+
+                Console.WriteLine("Press any key to exit.");
+                Console.ReadKey();
+
+                return;
+            }
+
 
             var startupDelaySeconds = appSettings.StartupDelaySeconds;
             if (reader is FakeReader)
@@ -354,7 +371,7 @@ namespace BobRfid
             reader.Connect(appSettings.ReaderIpAddress);
         }
 
-        private static void VerifyTrace()
+        private static void VerifyTrace(bool laps = false)
         {
             Console.WriteLine($"Currently connected to '{appSettings.ServiceBaseAddress}'.");
             Console.WriteLine("Input trace log file or directory:");
@@ -390,12 +407,29 @@ namespace BobRfid
 
                     foreach (var record in logRecords)
                     {
-                        if (record.LogLevel.Equals("Trace"))
+                        if (laps && record.LogLevel.Equals("Info"))
                         {
-                            var match = Regex.Match(record.Message, @"^Tracking ID '(\w+)'.$", RegexOptions.RightToLeft);
+                            var trackingMatch = Regex.Match(record.Message, @"^Tracking lap for ID '(\w+)' with time '([\d:\.]+)'\.$");
+                            //var loggingMatch = Regex.Match(record.Message, @"^Logging lap time of (\d+\.\d+) seconds for ID '(\w+)'\.$");
+                            if (trackingMatch.Success)
+                            {
+                                var lap = new PendingLap { LapTime = TimeSpan.Parse(trackingMatch.Groups[2].Value), Epc = trackingMatch.Groups[1].Value, IsRetry = true };
+                                logger.Info($"Found Tracking log record: {lap}");
+                                pendingLaps.Add(lap);
+                            }
+                            /*else if (loggingMatch.Success)
+                            {
+                                var lap = new PendingLap { LapTime = TimeSpan.FromSeconds(Convert.ToDouble(loggingMatch.Groups[1].Value)), Epc = loggingMatch.Groups[2].Value, IsRetry = true };
+                                logger.Info($"Found Logging log record: {lap}");
+                                pendingLaps.Add(lap);
+                            }*/
+                        }
+                        else if (!laps && record.LogLevel.Equals("Trace"))
+                        {
+                            var match = Regex.Match(record.Message, @"^Tracking ID '(\w+)'\.$", RegexOptions.RightToLeft);
                             if (match.Success)
                             {
-                                tagsToProcess.Add(new TagSeen { TimeStamp = DateTime.Parse(record.DateTime), Epc = match.Captures[0].Value, IsRetry = true });
+                                tagsToProcess.Add(new TagSeen { TimeStamp = DateTime.Parse(record.DateTime), Epc = match.Groups[1].Value, IsRetry = true });
                             }
                         }
                     }

@@ -27,6 +27,10 @@
     "RemoveAndRegister": {
       "commandName": "Project",
       "commandLineArgs": "--register --lowpower --removebeforeregistration"
+    },
+    "VerifyLaps": {
+      "commandName": "Project",
+      "commandLineArgs": "--verifylaps"
     }
   }
 }
