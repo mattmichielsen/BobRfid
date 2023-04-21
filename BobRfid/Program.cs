@@ -366,14 +366,24 @@ namespace BobRfid
 
         private static void AppSettings_SettingsSaving(object sender, System.ComponentModel.CancelEventArgs e)
         {
-            InitializeClient();
-            reader.Disconnect();
-            reader.Connect(appSettings.ReaderIpAddress);
+            try
+            {
+                InitializeClient();
+                reader.Disconnect();
+                reader.Connect(appSettings.ReaderIpAddress);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error loading settings: {ex}");
+            }
         }
 
         private static void VerifyTrace(bool laps = false)
         {
             Console.WriteLine($"Currently connected to '{appSettings.ServiceBaseAddress}'.");
+            Console.WriteLine("Input session ID (or leave blank for current session):");
+            var sessionId = Console.ReadLine();
+
             Console.WriteLine("Input trace log file or directory:");
             var path = Console.ReadLine();
             var files = new List<string>();
@@ -413,7 +423,7 @@ namespace BobRfid
                             //var loggingMatch = Regex.Match(record.Message, @"^Logging lap time of (\d+\.\d+) seconds for ID '(\w+)'\.$");
                             if (trackingMatch.Success)
                             {
-                                var lap = new PendingLap { LapTime = TimeSpan.Parse(trackingMatch.Groups[2].Value), Epc = trackingMatch.Groups[1].Value, IsRetry = true };
+                                var lap = new PendingLap { LapTime = TimeSpan.Parse(trackingMatch.Groups[2].Value), Epc = trackingMatch.Groups[1].Value, IsRetry = true, SessionId = sessionId };
                                 logger.Info($"Found Tracking log record: {lap}");
                                 pendingLaps.Add(lap);
                             }
@@ -750,7 +760,7 @@ namespace BobRfid
                         logger.Trace("Lap submission is a retry.");
                     }
 
-                    var result = await httpClient.PostAsync($"api/v1/lap_track?transponder_token={pending.Epc}&lap_time_in_ms={pending.LapTime.TotalMilliseconds}&is_retry={pending.IsRetry}", null);
+                    var result = await httpClient.PostAsync($"api/v1/lap_track?transponder_token={pending.Epc}&lap_time_in_ms={pending.LapTime.TotalMilliseconds}&is_retry={pending.IsRetry}&session={pending.SessionId}", null);
                     if (result.IsSuccessStatusCode)
                     {
                         var lap = JsonConvert.DeserializeObject<PilotRaceLap>(await result.Content.ReadAsStringAsync());

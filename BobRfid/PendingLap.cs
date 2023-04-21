@@ -8,6 +8,8 @@ namespace BobRfid
         public TimeSpan LapTime { get; set; }
         public bool IsRetry { get; set; } = false;
 
+        public string SessionId { get; set; }
+
         public override string ToString()
         {
             return $"PendingLap('{Epc}'): {LapTime} ({LapTime.TotalMilliseconds}ms)";
