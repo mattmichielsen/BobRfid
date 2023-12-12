@@ -170,7 +170,13 @@ namespace BobRfid
                     }
 
                     Console.Write("BobRfid:> ");
-                    input = Console.ReadLine().Trim();
+                    input = Console.ReadLine();
+                    if (string.IsNullOrWhiteSpace(input))
+                    {
+                        continue;
+                    }
+
+                    input = input.Trim();
                     if (input.Equals("exit", StringComparison.InvariantCultureIgnoreCase))
                     {
                         break;
@@ -178,7 +184,14 @@ namespace BobRfid
                     else if (input.Equals("connect", StringComparison.InvariantCultureIgnoreCase))
                     {
                         Console.WriteLine("Connecting...");
-                        reader.Connect();
+                        try
+                        {
+                            reader.Connect();
+                        }
+                        catch (Exception ex)
+                        {
+                            Console.WriteLine(ex.ToString());
+                        }
                     }
                     else if (input.Equals("disconnect", StringComparison.InvariantCultureIgnoreCase))
                     {
@@ -269,6 +282,11 @@ namespace BobRfid
                         {
                             try
                             {
+                                if (!File.Exists(split[1]))
+                                {
+                                    throw new FileNotFoundException($"File '{split[1]}' not found.");
+                                }
+
                                 Console.WriteLine($"Loaded '{LoadRegistrants(split[1])}' participants.");
                             }
                             catch (Exception ex)
@@ -551,6 +569,11 @@ namespace BobRfid
             if (team == null)
             {
                 team = string.Empty;
+            }
+
+            if (externalId == null)
+            {
+                externalId = string.Empty;
             }
 
             var printerType = (PrinterType)appSettings.PrinterType;
