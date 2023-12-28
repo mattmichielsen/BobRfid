@@ -54,7 +54,7 @@ namespace BobRfid
         ///  The main entry point for the application.
         /// </summary>
         [STAThread]
-        static void Main(string[] args)
+        static async Task Main(string[] args)
         {
             Console.WriteLine("BobRfid starting up.");
             appSettings.SettingsSaving += AppSettings_SettingsSaving;
@@ -95,7 +95,7 @@ namespace BobRfid
             }
 
             Task.Run(() => ProcessTags());
-            Task.Run(() => SubmitLaps());
+            Task.Run(async () => await SubmitLaps());
 
             if (args.Length > 0 && args.Contains("--verifytrace"))
             {
@@ -151,7 +151,7 @@ namespace BobRfid
 
             if (!NoMonitor)
             {
-                Task.Run(() => CheckConnections());
+                await Task.Run(() => CheckConnections());
             }
 
             if (args.Length > 0 && args.Contains("--form"))
@@ -287,7 +287,7 @@ namespace BobRfid
                                     throw new FileNotFoundException($"File '{split[1]}' not found.");
                                 }
 
-                                Console.WriteLine($"Loaded '{LoadRegistrants(split[1])}' participants.");
+                                Console.WriteLine($"Loaded '{await LoadRegistrants(split[1])}' participants.");
                             }
                             catch (Exception ex)
                             {
@@ -538,17 +538,34 @@ namespace BobRfid
             reader.TagsReported += OnTagsReported;
         }
 
-        public static int LoadRegistrants(string fileName)
+        public static async Task<int> LoadRegistrants(string fileName)
         {
             using (var reader = new StreamReader(fileName))
             {
                 var config = new CsvHelper.Configuration.CsvConfiguration(System.Globalization.CultureInfo.InvariantCulture) { HeaderValidated = null, MissingFieldFound = null };
+                var updated = 0;
                 using (var csv = new CsvReader(reader, config))
                 {
                     foreach (var record in csv.GetRecords<Pilot>())
                     {
+                        if (!string.IsNullOrWhiteSpace(record.ExternalId))
+                        {
+                            var pilot = await GetPilotById(record.ExternalId);
+                            if (pilot != null)
+                            {
+                                await AddPilot(record);
+                                updated++;
+                                if (!string.IsNullOrWhiteSpace(pilot.TransponderToken))
+                                {
+                                    continue;
+                                }
+                            }
+                        }
+
                         pendingRegistrations.Enqueue(record);
                     }
+
+                    Console.WriteLine($"Participants updated: {updated}");
 
                     return pendingRegistrations.Count();
                 }
@@ -619,13 +636,30 @@ namespace BobRfid
             {
                 return null;
             }
+            else
+            {
+                throw new Exception($"Can't find pilot with transponder token '{transponderToken}': {getResult.Content.ReadAsStringAsync()}");
+            }
+
+            return result;
+        }
+
+        private static async Task<Pilot> GetPilotById(string externalId)
+        {
+            Pilot result = null;
+
+            var getResult = await httpClient.GetAsync($"api/v1/pilot/id/{externalId}");
+            if (getResult.IsSuccessStatusCode)
+            {
+                result = Newtonsoft.Json.JsonConvert.DeserializeObject<Pilot>(await getResult.Content.ReadAsStringAsync());
+            }
             else if (getResult.StatusCode == System.Net.HttpStatusCode.NotFound)
             {
                 return null;
             }
             else
             {
-                throw new Exception($"Can't find pilot with transponder token '{transponderToken}': {getResult.Content.ReadAsStringAsync()}");
+                throw new Exception($"Can't find pilot with ID '{externalId}': {getResult.Content.ReadAsStringAsync()}");
             }
 
             return result;
@@ -653,8 +687,16 @@ namespace BobRfid
             if (postResult.IsSuccessStatusCode)
             {
                 var result = Newtonsoft.Json.JsonConvert.DeserializeObject<Pilot>(await postResult.Content.ReadAsStringAsync());
-                registeredPilots[pilot.TransponderToken] = result;
-                Console.WriteLine($"Added '{pilot.Name}' to team '{pilot.Team}' with ID '{pilot.TransponderToken}'.");
+                if (!string.IsNullOrWhiteSpace(pilot.TransponderToken))
+                {
+                    registeredPilots[pilot.TransponderToken] = result;
+                    Console.WriteLine($"Added '{pilot.Name}' to team '{pilot.Team}' with ID '{pilot.TransponderToken}'.");
+                }
+                else
+                {
+                    Console.WriteLine($"Updated '{pilot.Name}' to team '{pilot.Team}'.");
+                }
+
                 return result;
             }
             else
