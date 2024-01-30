@@ -151,7 +151,7 @@ namespace BobRfid
 
             if (!NoMonitor)
             {
-                await Task.Run(() => CheckConnections());
+                Task.Run(async () => await CheckConnections());
             }
 
             if (args.Length > 0 && args.Contains("--form"))
@@ -367,7 +367,7 @@ namespace BobRfid
                     logger.Error(ex, $"Monitor error: {ex}");
                 }
 
-                if (reader != null && reader.IsConnected && monitorResult)
+                if (reader != null && reader.IsConnected && (RegistrationMode || monitorResult))
                 {
                     Console.BackgroundColor = ConsoleColor.Green;
                     Console.ForegroundColor = ConsoleColor.Black;
