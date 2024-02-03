@@ -555,7 +555,7 @@ namespace BobRfid
                             {
                                 await AddPilot(record);
                                 updated++;
-                                if (!string.IsNullOrWhiteSpace(pilot.TransponderToken))
+                                if (!string.IsNullOrWhiteSpace(pilot.TransponderToken) && !RemoveBeforeRegistration)
                                 {
                                     continue;
                                 }
@@ -768,7 +768,7 @@ namespace BobRfid
                             logger.Trace($"Already registered pilot '{pilot.Name}' with ID '{pilot.TransponderToken}'.");
                         }
 
-                        if (!printed.ContainsKey(seen.Epc) || !printed[seen.Epc])
+                        if (pilot != null && (!printed.ContainsKey(seen.Epc) || !printed[seen.Epc]))
                         {
                             Print(seen.Epc, pilot.Name, pilot.Team, pilot.ExternalId);
                             printed[seen.Epc] = true;
