@@ -295,6 +295,27 @@ namespace BobRfid
                             }
                         }
                     }
+                    else if (input.StartsWith("print", StringComparison.InvariantCultureIgnoreCase))
+                    {
+                        var split = input.Split(' ');
+                        if (split.Length == 2)
+                        {
+                            try
+                            {
+                                var pilot = await GetPilotById(split[1]);
+                                if (pilot == null)
+                                {
+                                    throw new InvalidOperationException($"Participant '{split[1]}' not found.");
+                                }
+
+                                Print(pilot.TransponderToken, pilot.Name, pilot.Team, pilot.ExternalId);
+                            }
+                            catch (Exception ex)
+                            {
+                                logger.Error(ex, $"Error printing participant '{split[1]}': {ex}");
+                            }
+                        }
+                    }
                     else if (reader is FakeReader)
                     {
                         ((FakeReader)reader).SendCommand(input);
