@@ -13,9 +13,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <None Include="..\lib\MercuryLLRP.dll" Link="MercuryLLRP.dll">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
+    <Compile Remove="ImpinjReader.cs" />
   </ItemGroup>
 
   <ItemGroup>
@@ -23,7 +21,6 @@
     <PackageReference Include="DebounceThrottle" Version="1.0.0" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.2" />
     <PackageReference Include="NLog" Version="4.7.8" />
-    <PackageReference Include="OctaneSDK" Version="5.0.0" />
     <PackageReference Include="SharpZebra.rkone" Version="1.0.5" />
     <PackageReference Include="System.Configuration.ConfigurationManager" Version="5.0.0" />
     <PackageReference Include="System.Net.Http" Version="4.3.4" />
@@ -41,12 +38,12 @@
     <Reference Include="DYMO.Label.Framework">
       <HintPath>..\..\..\..\..\Program Files (x86)\DYMO\DYMO Label Software\Framework\DYMO.Label.Framework.dll</HintPath>
     </Reference>
+    <Reference Include="LLRP">
+      <HintPath>..\lib\LLRP.dll</HintPath>
+    </Reference>
     <Reference Include="MercuryAPI">
       <HintPath>..\lib\MercuryAPI.dll</HintPath>
       <Private>True</Private>
-    </Reference>
-    <Reference Include="LLRP">
-      <HintPath>..\lib\MercuryLLRP.dll</HintPath>
     </Reference>
   </ItemGroup>
 

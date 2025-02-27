@@ -1,5 +1,5 @@
-﻿using Impinj.OctaneSdk;
-using System;
+﻿using System;
+using ThingMagic;
 
 namespace BobRfid
 {
@@ -81,7 +81,7 @@ namespace BobRfid
         private void GenerateNewTag()
         {
             var rand = Convert.ToUInt32(new Random().Next(0, 10000000));
-            _tag.Epc = TagData.FromUnsignedInt(rand);
+            _tag.Epc = new TagData(BitConverter.GetBytes(rand));
             Console.WriteLine($"New EPC generated: {_tag.Epc}");
         }
 
@@ -98,7 +98,7 @@ namespace BobRfid
                 {
                     if (uint.TryParse(split[1], out uint result))
                     {
-                        _tag.Epc = TagData.FromUnsignedInt(result);
+                        _tag.Epc = new TagData(BitConverter.GetBytes(result));
                         Console.WriteLine($"Test EPC set to: {_tag.Epc}");
                     }
                     else

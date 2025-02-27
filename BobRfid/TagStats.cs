@@ -1,5 +1,4 @@
-﻿using Impinj.OctaneSdk;
-using System;
+﻿using System;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 
@@ -26,7 +25,7 @@ namespace BobRfid
         {
             get
             {
-                return LastReport?.Epc.ToHexString();
+                return LastReport?.Epc.EpcString;
             }
         }
 

@@ -1,5 +1,4 @@
-﻿using Impinj.OctaneSdk;
-using System;
+﻿using System;
 using ThingMagic;
 
 namespace BobRfid
@@ -27,54 +26,64 @@ namespace BobRfid
         {
             _portName = portName;
             _baud = 115200;
-            var r = Reader.Create($"tmr://{portName}");
+            var r = Reader.Create($"tmr:///{portName}");
             _reader = r as ThingMagic.SerialReader;
-            _reader.TagRead += _reader_TagRead;
+            r.ParamSet("/reader/transportTimeout", 100);
+            r.ParamSet("/reader/commandTimeout", 100);
+            if (_reader != null)
+            {
+                _reader.TagRead += _reader_TagRead;
+            }
         }
 
         private void _reader_TagRead(object sender, TagReadDataEventArgs e)
         {
-            var report = (TagReport)Activator.CreateInstance(typeof(TagReport), true);
-            var tag = (Tag)Activator.CreateInstance(typeof(Tag), true);
-            tag.Epc = Impinj.OctaneSdk.TagData.FromByteArray(e.TagReadData.Epc);
+            var report = new TagReport();
+            var tag = new Tag() { Epc = new TagData(e.TagReadData.Epc) };
             report.Tags.Add(tag);
             TagsReported?.Invoke(this, report);
         }
 
         public void ApplySettings(Settings settings)
         {
-            throw new NotImplementedException();
         }
 
         public void Connect(string portName)
         {
-            _portName = portName;
+            if (portName.StartsWith("COM"))
+            {
+                _portName = portName;
+            }
+
             Connect();
         }
 
         public void Connect()
         {
             _reader.OpenSerialPort(_portName, ref _baud);
+            SimpleReadPlan plan = new SimpleReadPlan(new int[] { 1 }, TagProtocol.GEN2, null, null, 1000);
+            _reader.ParamSet("/reader/read/plan", plan);
+            _reader.StartReading();
+            _connected = true;
         }
 
         public void Disconnect()
         {
-            throw new NotImplementedException();
+            _reader.stopStreaming();
         }
 
         public Settings QueryDefaultSettings()
         {
-            throw new NotImplementedException();
+            return new Settings();
         }
 
         public void SaveSettings()
         {
-            throw new NotImplementedException();
         }
 
         public void Stop()
         {
-            throw new NotImplementedException();
+            _reader.StopReading();
         }
     }
 }

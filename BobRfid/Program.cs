@@ -1,5 +1,4 @@
 using CsvHelper;
-using Impinj.OctaneSdk;
 using Newtonsoft.Json;
 using SharpZebra.Printing;
 using System;
@@ -72,7 +71,8 @@ namespace BobRfid
                 }
                 else if (readerType == ReaderType.Impinj)
                 {
-                    reader = new ImpinjReader();
+                    //reader = new ImpinjReader();
+                    throw new NotSupportedException("Impinj readers not supported in this build.");
                 }
                 else if (readerType == ReaderType.Serial)
                 {
@@ -86,7 +86,7 @@ namespace BobRfid
             catch (Exception ex)
             {
                 Console.WriteLine($"Failed to create reader: {ex}");
-                appSettings.ReaderType = 0;
+                appSettings.ReaderType = (int)ReaderType.Serial;
                 appSettings.Save();
                 return;
             }
@@ -266,23 +266,23 @@ namespace BobRfid
                             }
                         }
                     }
-                    else if (input.Equals("ip", StringComparison.InvariantCultureIgnoreCase))
-                    {
-                        if (!(reader is ImpinjReader))
-                        {
-                            Console.WriteLine("Reader is not an Impinj reader. Restart required.");
-                            appSettings.ReaderType = (int)ReaderType.Impinj;
-                        }
+                    //else if (input.Equals("ip", StringComparison.InvariantCultureIgnoreCase))
+                    //{
+                    //    if (!(reader is ImpinjReader))
+                    //    {
+                    //        Console.WriteLine("Reader is not an Impinj reader. Restart required.");
+                    //        appSettings.ReaderType = (int)ReaderType.Impinj;
+                    //    }
 
-                        Console.WriteLine($"Currently connecting to reader at host '{appSettings.ReaderIpAddress}'.");
-                        Console.Write("New hostname or IP address (blank to leave unchanged):> ");
-                        var newReaderHost = Console.ReadLine().Trim();
-                        if (!string.IsNullOrWhiteSpace(newReaderHost))
-                        {
-                            appSettings.ReaderIpAddress = newReaderHost;
-                            appSettings.Save();
-                        }
-                    }
+                    //    Console.WriteLine($"Currently connecting to reader at host '{appSettings.ReaderIpAddress}'.");
+                    //    Console.Write("New hostname or IP address (blank to leave unchanged):> ");
+                    //    var newReaderHost = Console.ReadLine().Trim();
+                    //    if (!string.IsNullOrWhiteSpace(newReaderHost))
+                    //    {
+                    //        appSettings.ReaderIpAddress = newReaderHost;
+                    //        appSettings.Save();
+                    //    }
+                    //}
                     else if (input.Equals("comport", StringComparison.InvariantCultureIgnoreCase))
                     {
                         if (!(reader is SerialReader))
@@ -532,52 +532,52 @@ namespace BobRfid
         private static void Connect(bool lowPower)
         {
             Console.WriteLine($"Connecting to reader at '{appSettings.ReaderIpAddress}'.");
-            reader.Connect(appSettings.ReaderIpAddress);
+            reader.Connect(appSettings.ReaderIpAddress ?? appSettings.ReaderPortName);
             Settings settings = reader.QueryDefaultSettings();
 
-            // Start the reader as soon as it's configured.
-            // This will allow it to run without a client connected.
-            settings.AutoStart.Mode = AutoStartMode.Immediate;
-            settings.AutoStop.Mode = AutoStopMode.None;
+            //// Start the reader as soon as it's configured.
+            //// This will allow it to run without a client connected.
+            //settings.AutoStart.Mode = AutoStartMode.Immediate;
+            //settings.AutoStop.Mode = AutoStopMode.None;
 
-            // Use Advanced GPO to set GPO #1 
-            // when an client (LLRP) connection is present.
-            //settings.Gpos.GetGpo(1).Mode = GpoMode.LLRPConnectionStatus;
+            //// Use Advanced GPO to set GPO #1 
+            //// when an client (LLRP) connection is present.
+            ////settings.Gpos.GetGpo(1).Mode = GpoMode.LLRPConnectionStatus;
 
-            // Tell the reader to include the timestamp in all tag reports.
-            settings.Report.IncludeFirstSeenTime = true;
-            settings.Report.IncludeLastSeenTime = true;
-            settings.Report.IncludeSeenCount = true;
+            //// Tell the reader to include the timestamp in all tag reports.
+            //settings.Report.IncludeFirstSeenTime = true;
+            //settings.Report.IncludeLastSeenTime = true;
+            //settings.Report.IncludeSeenCount = true;
 
-            // If this application disconnects from the 
-            // reader, hold all tag reports and events.
-            settings.HoldReportsOnDisconnect = true;
+            //// If this application disconnects from the 
+            //// reader, hold all tag reports and events.
+            //settings.HoldReportsOnDisconnect = true;
 
-            // Enable keepalives.
-            settings.Keepalives.Enabled = true;
-            settings.Keepalives.PeriodInMs = 5000;
+            //// Enable keepalives.
+            //settings.Keepalives.Enabled = true;
+            //settings.Keepalives.PeriodInMs = 5000;
 
-            // Enable link monitor mode.
-            // If our application fails to reply to
-            // five consecutive keepalive messages,
-            // the reader will close the network connection.
-            settings.Keepalives.EnableLinkMonitorMode = true;
-            settings.Keepalives.LinkDownThreshold = 5;
+            //// Enable link monitor mode.
+            //// If our application fails to reply to
+            //// five consecutive keepalive messages,
+            //// the reader will close the network connection.
+            //settings.Keepalives.EnableLinkMonitorMode = true;
+            //settings.Keepalives.LinkDownThreshold = 5;
 
-            if (lowPower)
-            {
-                settings.ReaderMode = ReaderMode.AutoSetDenseReader;
-                settings.SearchMode = SearchMode.SingleTarget;
-                settings.Session = 1;
-                settings.Antennas.TxPowerMax = false;
-                settings.Antennas.TxPowerInDbm = 20;
-                settings.Antennas.RxSensitivityMax = false;
-                settings.Antennas.RxSensitivityInDbm = -70;
-            }
-            else
-            {
-                settings.ReaderMode = ReaderMode.AutoSetDenseReaderDeepScan;
-            }
+            //if (lowPower)
+            //{
+            //    settings.ReaderMode = ReaderMode.AutoSetDenseReader;
+            //    settings.SearchMode = SearchMode.SingleTarget;
+            //    settings.Session = 1;
+            //    settings.Antennas.TxPowerMax = false;
+            //    settings.Antennas.TxPowerInDbm = 20;
+            //    settings.Antennas.RxSensitivityMax = false;
+            //    settings.Antennas.RxSensitivityInDbm = -70;
+            //}
+            //else
+            //{
+            //    settings.ReaderMode = ReaderMode.AutoSetDenseReaderDeepScan;
+            //}
 
             // Assign an event handler that will be called
             // when keepalive messages are received.
@@ -780,9 +780,9 @@ namespace BobRfid
                     return;
                 }
 
-                foreach (Tag tag in report)
+                foreach (Tag tag in report.Tags)
                 {
-                    var epc = tag.Epc.ToHexString();
+                    var epc = tag.Epc.EpcString;
                     logger.Trace($"Tracking ID '{epc}'.");
                     tagsToProcess.Add(new TagSeen { Epc = epc, Tag = tag, TimeStamp = now });
                 }

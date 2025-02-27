@@ -1,5 +1,4 @@
-﻿using Impinj.OctaneSdk;
-using System;
+﻿using System;
 
 namespace BobRfid
 {
