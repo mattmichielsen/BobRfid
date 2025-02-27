@@ -3,13 +3,13 @@ using System;
 
 namespace BobRfid
 {
-    public class RealReader : IReader
+    public class ImpinjReader : IReader
     {
-        private ImpinjReader _reader;
+        private Impinj.OctaneSdk.ImpinjReader _reader;
 
-        public RealReader()
+        public ImpinjReader()
         {
-            _reader = new ImpinjReader();
+            _reader = new Impinj.OctaneSdk.ImpinjReader();
             _reader.TagsReported += OnTagsReported;
             _reader.KeepaliveReceived += OnKeepaliveReceived;
             _reader.ConnectionLost += OnConnectionLost;
@@ -17,17 +17,17 @@ namespace BobRfid
 
         public bool IsConnected => _reader.IsConnected;
 
-        private void OnTagsReported(ImpinjReader reader, TagReport report)
+        private void OnTagsReported(Impinj.OctaneSdk.ImpinjReader reader, TagReport report)
         {
             TagsReported?.Invoke(this, report);
         }
         
-        private void OnKeepaliveReceived(ImpinjReader reader)
+        private void OnKeepaliveReceived(Impinj.OctaneSdk.ImpinjReader reader)
         {
             KeepaliveReceived?.Invoke(this, new EventArgs());    
         }
 
-        private void OnConnectionLost(ImpinjReader reader)
+        private void OnConnectionLost(Impinj.OctaneSdk.ImpinjReader reader)
         {
             ConnectionLost?.Invoke(this, new EventArgs());
         }

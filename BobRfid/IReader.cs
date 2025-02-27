@@ -11,7 +11,7 @@ namespace BobRfid
 
         bool IsConnected { get; }
 
-        void Connect(string v);
+        void Connect(string addressOrPortName);
         Settings QueryDefaultSettings();
         void ApplySettings(Settings settings);
         void SaveSettings();

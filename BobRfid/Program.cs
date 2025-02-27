@@ -61,14 +61,34 @@ namespace BobRfid
 
             InitializeClient();
 
-            if (args.Length > 0 && args.Contains("--test"))
+            var readerType = (ReaderType)appSettings.ReaderType;
+
+            try
             {
-                reader = new FakeReader();
-                Console.WriteLine("TEST MODE");
+                if ((args.Length > 0 && args.Contains("--test")) || readerType == ReaderType.Fake)
+                {
+                    reader = new FakeReader();
+                    Console.WriteLine("TEST MODE");
+                }
+                else if (readerType == ReaderType.Impinj)
+                {
+                    reader = new ImpinjReader();
+                }
+                else if (readerType == ReaderType.Serial)
+                {
+                    reader = new SerialReader(appSettings.ReaderPortName);
+                }
+                else
+                {
+                    throw new NotSupportedException($"Unknown reader type '{readerType}'.");
+                }
             }
-            else
+            catch (Exception ex)
             {
-                reader = new RealReader();
+                Console.WriteLine($"Failed to create reader: {ex}");
+                appSettings.ReaderType = 0;
+                appSettings.Save();
+                return;
             }
 
             if (args.Length > 0 && args.Contains("--register"))
@@ -248,12 +268,35 @@ namespace BobRfid
                     }
                     else if (input.Equals("ip", StringComparison.InvariantCultureIgnoreCase))
                     {
+                        if (!(reader is ImpinjReader))
+                        {
+                            Console.WriteLine("Reader is not an Impinj reader. Restart required.");
+                            appSettings.ReaderType = (int)ReaderType.Impinj;
+                        }
+
                         Console.WriteLine($"Currently connecting to reader at host '{appSettings.ReaderIpAddress}'.");
                         Console.Write("New hostname or IP address (blank to leave unchanged):> ");
                         var newReaderHost = Console.ReadLine().Trim();
                         if (!string.IsNullOrWhiteSpace(newReaderHost))
                         {
                             appSettings.ReaderIpAddress = newReaderHost;
+                            appSettings.Save();
+                        }
+                    }
+                    else if (input.Equals("comport", StringComparison.InvariantCultureIgnoreCase))
+                    {
+                        if (!(reader is SerialReader))
+                        {
+                            Console.WriteLine("Reader is not a serial reader. Restart required.");
+                            appSettings.ReaderType = (int)ReaderType.Serial;
+                        }
+
+                        Console.WriteLine($"Current COM port setting is '{appSettings.ReaderPortName}'.");
+                        Console.WriteLine("New COM port (blank to leave unchanged):> ");
+                        var newComPort = Console.ReadLine().Trim();
+                        if (!string.IsNullOrWhiteSpace(newComPort))
+                        {
+                            appSettings.ReaderPortName = newComPort;
                             appSettings.Save();
                         }
                     }
@@ -408,8 +451,8 @@ namespace BobRfid
             try
             {
                 InitializeClient();
-                reader.Disconnect();
-                reader.Connect(appSettings.ReaderIpAddress);
+                reader?.Disconnect();
+                reader?.Connect(appSettings.ReaderIpAddress ?? appSettings.ReaderPortName);
             }
             catch (Exception ex)
             {
