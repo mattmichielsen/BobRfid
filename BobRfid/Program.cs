@@ -36,6 +36,8 @@ namespace BobRfid
 
         public static bool RemoveBeforeRegistration { get; set; } = false;
 
+        public static bool ReprintForRegistration { get; set; } = false;
+
         static IZebraPrinter ZebraPrinter
         {
             get
@@ -94,8 +96,8 @@ namespace BobRfid
                 RemoveBeforeRegistration = true;
             }
 
-            Task.Run(() => ProcessTags());
-            Task.Run(async () => await SubmitLaps());
+            _ = Task.Run(() => ProcessTags());
+            _ = Task.Run(async () => await SubmitLaps());
 
             if (args.Length > 0 && args.Contains("--verifytrace"))
             {
@@ -151,7 +153,7 @@ namespace BobRfid
 
             if (!NoMonitor)
             {
-                Task.Run(async () => await CheckConnections());
+                _ = Task.Run(async () => await CheckConnections());
             }
 
             if (args.Length > 0 && args.Contains("--form"))
@@ -164,6 +166,7 @@ namespace BobRfid
                 Console.WriteLine("Type 'exit' to stop.");
                 while (true)
                 {
+                    await Task.Delay(50);
                     if (pendingRegistrations.Any())
                     {
                         Console.WriteLine($"Pending registrations: {pendingRegistrations.Count}");
@@ -314,6 +317,13 @@ namespace BobRfid
                             {
                                 logger.Error(ex, $"Error printing participant '{split[1]}': {ex}");
                             }
+                        }
+                    }
+                    else if (input.Equals("list", StringComparison.InvariantCultureIgnoreCase))
+                    {
+                        foreach (var pending in pendingRegistrations)
+                        {
+                            Console.WriteLine($"Pending: {pending.Name} - {pending.Team} - {pending.ExternalId}");
                         }
                     }
                     else if (reader is FakeReader)
@@ -791,7 +801,15 @@ namespace BobRfid
 
                         if (pilot != null && (!printed.ContainsKey(seen.Epc) || !printed[seen.Epc]))
                         {
-                            Print(seen.Epc, pilot.Name, pilot.Team, pilot.ExternalId);
+                            if (ReprintForRegistration)
+                            {
+                                Print(seen.Epc, pilot.Name, pilot.Team, pilot.ExternalId);
+                            }
+                            else
+                            {
+                                logger.Info($"Not printing new label for '{pilot.Name}' with ID '{seen.Epc}'.");
+                            }
+
                             printed[seen.Epc] = true;
                         }
                     }
