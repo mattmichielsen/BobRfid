@@ -31,6 +31,10 @@
     "VerifyLaps": {
       "commandName": "Project",
       "commandLineArgs": "--verifylaps"
+    },
+    "ReprintRegistration": {
+      "commandName": "Project",
+      "commandLineArgs": "--register --lowpower --reprintforregistration"
     }
   }
 }

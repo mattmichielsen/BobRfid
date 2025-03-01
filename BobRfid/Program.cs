@@ -30,6 +30,7 @@ namespace BobRfid
         static Queue<Pilot> pendingRegistrations = new Queue<Pilot>();
         static BlockingCollection<PendingLap> pendingLaps = new BlockingCollection<PendingLap>();
         static AppSettings appSettings = new AppSettings();
+        private static int _lastCount;
 
         public static bool RegistrationMode { get; set; } = false;
         public static bool NoMonitor { get; set; } = false;
@@ -94,6 +95,11 @@ namespace BobRfid
             if (args.Length > 0 && args.Contains("--removebeforeregistration"))
             {
                 RemoveBeforeRegistration = true;
+            }
+
+            if (args.Length > 0 && args.Contains("--reprintforregistration"))
+            {
+                ReprintForRegistration = true;
             }
 
             _ = Task.Run(() => ProcessTags());
@@ -325,6 +331,10 @@ namespace BobRfid
                         {
                             Console.WriteLine($"Pending: {pending.Name} - {pending.Team} - {pending.ExternalId}");
                         }
+                    }
+                    else if (input.Equals("count", StringComparison.InvariantCultureIgnoreCase))
+                    {
+                        Console.WriteLine($"Tag count: {_lastCount}");
                     }
                     else if (reader is FakeReader)
                     {
@@ -584,8 +594,12 @@ namespace BobRfid
                             var pilot = await GetPilotById(record.ExternalId);
                             if (pilot != null)
                             {
-                                await AddPilot(record);
-                                updated++;
+                                if (pilot.Team != record.Team)
+                                {
+                                    await AddPilot(record);
+                                    updated++;
+                                }
+
                                 if (!string.IsNullOrWhiteSpace(pilot.TransponderToken) && !RemoveBeforeRegistration)
                                 {
                                     continue;
@@ -740,6 +754,7 @@ namespace BobRfid
         {
             dispatcher.Throttle(() =>
             {
+                _lastCount = report.Tags.Count;
                 var now = DateTime.Now;
                 if (RegistrationMode && report.Tags.Count > 1)
                 {
