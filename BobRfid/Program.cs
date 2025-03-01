@@ -24,7 +24,7 @@ namespace BobRfid
         static ConcurrentDictionary<string, Pilot> registeredPilots = new ConcurrentDictionary<string, Pilot>();
         static ConcurrentDictionary<string, bool> printed = new ConcurrentDictionary<string, bool>();
         static HttpClient httpClient;
-        static DebounceThrottle.ThrottleDispatcher dispatcher = new DebounceThrottle.ThrottleDispatcher(100);
+        static DebounceThrottle.ThrottleDispatcher dispatcher = new DebounceThrottle.ThrottleDispatcher(TimeSpan.FromMilliseconds(100));
         static IZebraPrinter printer;
         static BlockingCollection<TagSeen> tagsToProcess = new BlockingCollection<TagSeen>();
         static Queue<Pilot> pendingRegistrations = new Queue<Pilot>();
