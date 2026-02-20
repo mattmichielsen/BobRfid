@@ -35,6 +35,10 @@
     "ReprintRegistration": {
       "commandName": "Project",
       "commandLineArgs": "--register --lowpower --reprintforregistration"
+    },
+    "RemoveReprintRegister": {
+      "commandName": "Project",
+      "commandLineArgs": "--register --lowpower --reprintforregistration --removebeforeregistration"
     }
   }
 }
