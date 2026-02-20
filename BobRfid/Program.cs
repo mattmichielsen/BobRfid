@@ -314,7 +314,11 @@ namespace BobRfid
                                 var pilot = await GetPilotById(split[1]);
                                 if (pilot == null)
                                 {
-                                    throw new InvalidOperationException($"Participant '{split[1]}' not found.");
+                                    pilot = await GetPilot(split[1]);
+                                    if (pilot == null)
+                                    {
+                                        throw new InvalidOperationException($"Participant '{split[1]}' not found.");
+                                    }
                                 }
 
                                 Print(pilot.TransponderToken, pilot.Name, pilot.Team, pilot.ExternalId);
@@ -654,7 +658,7 @@ namespace BobRfid
                 var label = DYMO.Label.Framework.Label.Open(Path.Combine(Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location), "DymoTemplate.label"));
                 label.SetObjectText("id", id);
                 label.SetObjectText("name", name);
-                label.SetObjectText("team", string.Empty);
+                label.SetObjectText("team", team);
                 label.SetObjectText("external_id", externalId);
                 label.Print("DYMO LabelWriter 450");
             }
