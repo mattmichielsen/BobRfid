@@ -103,7 +103,8 @@ namespace BobRfid
                     }
                     else
                     {
-                        logger.Warn($"Invalid uint value '{split[1]}'.");
+                        _tag.Epc = TagData.FromHexString(split[1]);
+                        Console.WriteLine($"Test EPC set to: {_tag.Epc}");
                     }
                 }
                 else
