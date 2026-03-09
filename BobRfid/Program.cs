@@ -314,7 +314,11 @@ namespace BobRfid
                                 var pilot = await GetPilotById(split[1]);
                                 if (pilot == null)
                                 {
-                                    throw new InvalidOperationException($"Participant '{split[1]}' not found.");
+                                    pilot = await GetPilot(split[1]);
+                                    if (pilot == null)
+                                    {
+                                        throw new InvalidOperationException($"Participant '{split[1]}' not found.");
+                                    }
                                 }
 
                                 Print(pilot.TransponderToken, pilot.Name, pilot.Team, pilot.ExternalId);
@@ -543,13 +547,13 @@ namespace BobRfid
 
             if (lowPower)
             {
-                settings.ReaderMode = ReaderMode.AutoSetDenseReader;
+                settings.ReaderMode = ReaderMode.AutoSetDenseReaderDeepScan;
                 settings.SearchMode = SearchMode.SingleTarget;
                 settings.Session = 1;
                 settings.Antennas.TxPowerMax = false;
-                settings.Antennas.TxPowerInDbm = 20;
+                //settings.Antennas.TxPowerInDbm = 30;
                 settings.Antennas.RxSensitivityMax = false;
-                settings.Antennas.RxSensitivityInDbm = -70;
+                //settings.Antennas.RxSensitivityInDbm = -15;
             }
             else
             {
@@ -746,7 +750,7 @@ namespace BobRfid
             }
             else
             {
-                throw new Exception($"Failed to add pilot: {await postResult.Content.ReadAsStringAsync()}");
+                throw new Exception($"Failed to add pilot '{pilot.Name}': {await postResult.Content.ReadAsStringAsync()}");
             }
         }
 
@@ -765,6 +769,11 @@ namespace BobRfid
                 foreach (Tag tag in report)
                 {
                     var epc = tag.Epc.ToHexString();
+                    if (epc.StartsWith("2C2"))
+                    {
+                        continue;
+                    }
+
                     logger.Trace($"Tracking ID '{epc}'.");
                     tagsToProcess.Add(new TagSeen { Epc = epc, Tag = tag, TimeStamp = now });
                 }
@@ -830,7 +839,7 @@ namespace BobRfid
                     }
                     catch (Exception ex)
                     {
-                        logger.Error(ex, $"Error registering pilot: {ex}");
+                        logger.Error(ex, $"Error registering pilot with EPC '{seen.Epc}': {ex}");
                     }
                 }
                 else

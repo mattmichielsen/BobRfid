@@ -39,6 +39,10 @@
     "FakeReprintRegistration": {
       "commandName": "Project",
       "commandLineArgs": "--register --test --reprintforregistration --nomonitor"
+    },
+    "RemoveReprintRegister": {
+      "commandName": "Project",
+      "commandLineArgs": "--register --lowpower --reprintforregistration --removebeforeregistration"
     }
   }
 }
